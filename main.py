@@ -1,13 +1,13 @@
 """
-Movie Semantic Search API - Main Entry Point
+Construction Material Semantic Search API - Main Entry Point
 """
 
 
 def main():
-    print("🎬 Movie Semantic Search API")
+    print("�️ Construction Material Semantic Search API")
     print("=" * 60)
     print()
-    print("This is a REST API for semantic movie search!")
+    print("This is a REST API for semantic construction material search!")
     print()
     print("To start the server:")
     print("  uvicorn api:app --reload")
@@ -15,7 +15,7 @@ def main():
     print("Then test it at:")
     print("  http://localhost:8000/docs")
     print()
-    print("See QUICKSTART.md for more details.")
+    print("See QUICKSTART.md or README.md for more details.")
     print("=" * 60)
 
 

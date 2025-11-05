@@ -1,16 +1,16 @@
-# 🎬 Movie Semantic Search API - Quick Start Guide
+# �️ Construction Material Semantic Search API - Quick Start Guide
 
 ## ✅ What's Been Built
 
-You now have a fully functional **semantic search API** for movies! It's no longer a CLI tool - it's a production-ready REST API.
+You now have a fully functional **semantic search API** for construction materials! This is a production-ready REST API connected to MongoDB.
 
 ### Key Features
-- 🔍 **Natural language search** - Search with phrases like "action movie with explosions"
+- 🔍 **Natural language search** - Search with phrases like "cement for foundation work"
 - ⚡ **Fast responses** - Cached embeddings for instant results
 - 📊 **Relevance scoring** - Each result includes a similarity score (0-1)
 - 🌐 **RESTful API** - Easy integration with any frontend or service
 - 📚 **Auto-generated docs** - Interactive API documentation
-- 🎯 **5,000 movies indexed** - Ready to search
+- 💾 **MongoDB Integration** - Real-time data from MongoDB Atlas
 
 ## 🚀 How to Start the API
 
@@ -45,18 +45,18 @@ Click on "Try it out" for any endpoint and test it interactively!
 # Health check
 Invoke-WebRequest -Uri http://localhost:8000/health
 
-# Search for movies
-Invoke-WebRequest -Uri 'http://localhost:8000/search?query=action+movie&top_k=3'
+# Search for materials
+Invoke-WebRequest -Uri 'http://localhost:8000/search?query=cement+bags&top_k=3'
 ```
 
 ### 3. Python Test
 ```python
 import requests
 
-# Search for movies
+# Search for materials
 response = requests.get(
     "http://localhost:8000/search",
-    params={"query": "romantic comedy", "top_k": 5}
+    params={"query": "steel rods", "top_k": 5}
 )
 
 print(response.json())
@@ -64,13 +64,13 @@ print(response.json())
 
 ### 4. cURL Test (optional)
 ```bash
-curl "http://localhost:8000/search?query=action+movie&top_k=3"
+curl "http://localhost:8000/search?query=waterproofing+material&top_k=3"
 ```
 
 ## 📡 API Endpoints
 
 ### GET /search
-Search for movies with a query string.
+Search for construction materials with a query string.
 
 **Example:**
 ```
@@ -98,7 +98,7 @@ Content-Type: application/json
 ```
 
 ### GET /health
-Check if the API is running and see how many movies are indexed.
+Check if the API is running and see how many materials are indexed.
 
 **Example:**
 ```
@@ -109,7 +109,7 @@ GET http://localhost:8000/health
 ```json
 {
   "status": "healthy",
-  "total_movies": 5000
+  "total_materials": 3
 }
 ```
 
@@ -117,33 +117,41 @@ GET http://localhost:8000/health
 
 The API understands natural language! Try these:
 
-- "action movie with explosions"
-- "romantic comedy set in new york"
-- "sci-fi thriller about time travel"
-- "family friendly animated adventure"
-- "horror movie in a haunted house"
-- "drama about family relationships"
-- "comedy with mistaken identity"
-- "thriller with plot twists"
-- "movie about artificial intelligence"
-- "adventure film set in jungle"
+- "cement for foundation work"
+- "steel rods for reinforcement"
+- "waterproofing material for roof"
+- "paint for exterior walls"
+- "tiles for bathroom flooring"
+- "sand for concrete mixing"
+- "bricks for wall construction"
+- "adhesive for tile installation"
+- "plywood for furniture"
+- "metal pipes for plumbing"
 
 ## 📝 Example Response
 
 ```json
 {
-  "query": "action movie with explosions",
+  "query": "cement for foundation",
   "results": [
     {
-      "id": 123,
-      "title": "Die Hard",
-      "description": "Action-packed thriller...",
+      "id": "507f1f77bcf86cd799439011",
+      "title": "Portland Cement",
+      "description": "High-quality cement for construction...",
+      "price": 250.0,
+      "quantity": 500,
+      "category": "Cement",
+      "image": "https://example.com/image.jpg",
       "similarity_score": 0.8532
     },
     {
-      "id": 456,
-      "title": "Mad Max",
-      "description": "Post-apocalyptic action...",
+      "id": "507f1f77bcf86cd799439012",
+      "title": "Quick Set Cement",
+      "description": "Fast-setting cement mix...",
+      "price": 280.0,
+      "quantity": 300,
+      "category": "Cement",
+      "image": "https://example.com/image2.jpg",
       "similarity_score": 0.7891
     }
   ],
@@ -158,11 +166,10 @@ materialmoversearch/
 ├── api.py                    # Main FastAPI application
 ├── lib/
 │   └── semantic_search.py    # Search engine logic
-├── data/
-│   └── movies.json           # 5,000 movies database
+├── .env                      # MongoDB credentials
 ├── cache/
-│   ├── movie_embeddings.pkl  # Cached embeddings (auto-generated)
-│   └── movies_data.pkl       # Cached movie data (auto-generated)
+│   ├── material_embeddings.pkl  # Cached embeddings (auto-generated)
+│   └── materials_data.pkl       # Cached material data (auto-generated)
 ├── main.py                   # Info script (run for instructions)
 ├── README.md                 # Full documentation
 ├── QUICKSTART.md             # This file
@@ -171,9 +178,11 @@ materialmoversearch/
 
 ## 🔧 How It Works
 
-1. **First startup** (~60 seconds):
+1. **First startup** (~30-60 seconds):
+   - Connects to MongoDB Atlas
+   - Fetches all construction materials from database
    - Loads the sentence-transformer model
-   - Generates embeddings for all 5,000 movies
+   - Generates embeddings for all materials
    - Caches embeddings to disk for future use
 
 2. **Subsequent startups** (~2 seconds):
@@ -182,13 +191,13 @@ materialmoversearch/
 
 3. **Search process** (< 100ms):
    - Encodes your query into a vector
-   - Computes cosine similarity with all movie embeddings
+   - Computes cosine similarity with all material embeddings
    - Returns top matches with scores
 
 ## 📊 Performance
 
 - **Search latency**: < 100ms per query
-- **Cache size**: ~50MB for 5,000 movies
+- **Cache size**: Depends on number of materials in MongoDB
 - **Memory usage**: ~500MB when running
 - **Throughput**: ~100-500 requests/second
 
@@ -228,7 +237,7 @@ Use the API from any frontend framework:
 
 **React/Next.js:**
 ```javascript
-const searchMovies = async (query) => {
+const searchMaterials = async (query) => {
   const response = await fetch(
     `http://localhost:8000/search?query=${query}&top_k=10`
   );
@@ -238,7 +247,7 @@ const searchMovies = async (query) => {
 
 **Vue.js:**
 ```javascript
-async searchMovies(query) {
+async searchMaterials(query) {
   const response = await this.$http.get('/search', {
     params: { query, top_k: 10 }
   });
@@ -250,6 +259,7 @@ async searchMovies(query) {
 1. **Docker**: Use the provided Dockerfile example in README.md
 2. **Cloud**: Deploy to AWS, Azure, Google Cloud, or Heroku
 3. **Configure CORS**: Update allowed origins in `api.py`
+4. **Environment**: Set MongoDB credentials in `.env` file
 
 ### Add Authentication
 Add an API key or JWT authentication to protect your endpoints.
@@ -265,17 +275,26 @@ netstat -ano | findstr :8000
 uvicorn api:app --port 8080 --reload
 ```
 
+### MongoDB Connection Issues
+```powershell
+# Check your .env file has correct credentials
+# Verify IP whitelist in MongoDB Atlas
+# Test connection with MongoDB Compass
+```
+
 ### Cache issues
 ```powershell
 # Delete the cache and restart
 Remove-Item -Recurse -Force .\cache\
-# Server will rebuild cache on next startup
+# Server will rebuild cache from MongoDB on next startup
 ```
 
 ### Slow first startup
-This is normal! The first startup takes ~60 seconds to:
+This is normal! The first startup takes ~30-60 seconds to:
+- Connect to MongoDB Atlas
 - Download the AI model (~90MB)
-- Generate embeddings for 5,000 movies
+- Fetch materials from database
+- Generate embeddings
 
 After the first run, startup takes only ~2 seconds.
 
@@ -284,16 +303,16 @@ After the first run, startup takes only ~2 seconds.
 - **Full documentation**: See `README.md`
 - **Interactive docs**: http://localhost:8000/docs
 - **API reference**: http://localhost:8000/redoc
-- **Example code**: See `examples.py`
 
 ## ✨ Summary
 
 You now have a **production-ready semantic search API** that:
 - ✅ Accepts natural language queries
-- ✅ Returns relevant movie recommendations
-- ✅ Includes similarity scores
+- ✅ Returns relevant construction material recommendations
+- ✅ Includes similarity scores and pricing
 - ✅ Has auto-generated documentation
 - ✅ Is fast and efficient with caching
+- ✅ Connects to MongoDB Atlas
 - ✅ Is ready to integrate with any frontend
 
 **Start the server and try it out at http://localhost:8000/docs!** 🚀

@@ -1,13 +1,14 @@
-# Movie Semantic Search API 🎬
+# Construction Material Semantic Search API �️
 
-A powerful semantic search API for movies powered by FastAPI and sentence transformers. Search for movies using natural language queries and get semantically relevant results.
+A powerful semantic search API for construction materials powered by FastAPI and sentence transformers. Search for construction materials from MongoDB using natural language queries and get semantically relevant results.
 
 ## Features
 
-- 🔍 **Semantic Search**: Find movies using natural language queries
+- 🔍 **Semantic Search**: Find construction materials using natural language queries
 - ⚡ **Fast Performance**: Cached embeddings for instant search results
 - 🎯 **Accurate Results**: Powered by sentence-transformers
 - 📊 **Relevance Scores**: Each result includes a similarity score
+- 💾 **MongoDB Integration**: Real-time data from MongoDB Atlas
 - 🔄 **RESTful API**: Simple HTTP endpoints for easy integration
 - 📚 **Auto Documentation**: Interactive API docs at `/docs`
 - 🌐 **CORS Enabled**: Ready for frontend integration
@@ -48,8 +49,8 @@ The API will be available at:
 ### 🏠 Root
 **GET /** - API information and available endpoints
 
-### 🔍 Search Movies
-**GET /search** - Search for movies using semantic similarity
+### 🔍 Search Materials
+**GET /search** - Search for construction materials using semantic similarity
 
 Query Parameters:
 - `query` (required): Natural language search query
@@ -58,7 +59,7 @@ Query Parameters:
 
 Example:
 ```bash
-curl "http://localhost:8000/search?query=action%20movie%20with%20explosions&top_k=5"
+curl "http://localhost:8000/search?query=cement%20for%20foundation&top_k=5"
 ```
 
 **POST /search** - Same as GET but with JSON body
@@ -66,7 +67,7 @@ curl "http://localhost:8000/search?query=action%20movie%20with%20explosions&top_
 Request Body:
 ```json
 {
-  "query": "romantic comedy set in new york",
+  "query": "steel rods for reinforcement",
   "top_k": 10,
   "min_score": 0.3
 }
@@ -76,11 +77,11 @@ Example:
 ```bash
 curl -X POST "http://localhost:8000/search" \
   -H "Content-Type: application/json" \
-  -d '{"query": "sci-fi thriller about time travel", "top_k": 5}'
+  -d '{"query": "waterproofing material for roof", "top_k": 5}'
 ```
 
 ### ❤️ Health Check
-**GET /health** - Check API status and total movies indexed
+**GET /health** - Check API status and total materials indexed
 
 Example:
 ```bash
@@ -90,7 +91,7 @@ curl "http://localhost:8000/health"
 ### 🔄 Rebuild Cache
 **POST /rebuild-cache** - Rebuild embeddings cache (admin endpoint)
 
-Use this if you update the movies data file.
+Use this if you update the materials data in MongoDB.
 
 ## Example Usage
 
@@ -98,15 +99,15 @@ Use this if you update the movies data file.
 
 ```bash
 # Simple search
-curl "http://localhost:8000/search?query=romantic%20comedy"
+curl "http://localhost:8000/search?query=cement%20bags"
 
 # Search with parameters
-curl "http://localhost:8000/search?query=action%20thriller&top_k=10&min_score=0.3"
+curl "http://localhost:8000/search?query=steel%20beams&top_k=10&min_score=0.3"
 
 # POST request
 curl -X POST "http://localhost:8000/search" \
   -H "Content-Type: application/json" \
-  -d '{"query": "family friendly animated movie", "top_k": 5}'
+  -d '{"query": "paint for exterior walls", "top_k": 5}'
 ```
 
 ### Using Python
@@ -114,20 +115,20 @@ curl -X POST "http://localhost:8000/search" \
 ```python
 import requests
 
-# Search for movies
+# Search for materials
 response = requests.get(
     "http://localhost:8000/search",
     params={
-        "query": "space adventure with aliens",
+        "query": "cement for foundation work",
         "top_k": 5,
         "min_score": 0.2
     }
 )
 
 results = response.json()
-print(f"Found {results['count']} movies:")
-for movie in results['results']:
-    print(f"- {movie['title']} (score: {movie['similarity_score']})")
+print(f"Found {results['count']} materials:")
+for material in results['results']:
+    print(f"- {material['title']} (score: {material['similarity_score']}, price: ${material['price']})")
 ```
 
 ### Using JavaScript/Fetch
@@ -135,7 +136,7 @@ for movie in results['results']:
 ```javascript
 // GET request
 const response = await fetch(
-  'http://localhost:8000/search?query=action+movie&top_k=5'
+  'http://localhost:8000/search?query=steel+rods&top_k=5'
 );
 const data = await response.json();
 console.log(data.results);
@@ -145,7 +146,7 @@ const response = await fetch('http://localhost:8000/search', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    query: 'romantic comedy',
+    query: 'waterproofing for roof',
     top_k: 10
   })
 });
@@ -157,12 +158,16 @@ const data = await response.json();
 Successful search response:
 ```json
 {
-  "query": "action movie with explosions",
+  "query": "cement for foundation",
   "results": [
     {
-      "id": 1,
-      "title": "Movie Title",
-      "description": "Movie description...",
+      "id": "507f1f77bcf86cd799439011",
+      "title": "Portland Cement",
+      "description": "High-quality cement for construction...",
+      "price": 250.0,
+      "quantity": 500,
+      "category": "Cement",
+      "image": "https://example.com/image.jpg",
       "similarity_score": 0.8532
     }
   ],
@@ -173,16 +178,16 @@ Successful search response:
 ## Example Queries
 
 Try these natural language queries:
-- "action movie with explosions"
-- "romantic comedy set in new york"
-- "sci-fi thriller about time travel"
-- "family friendly animated adventure"
-- "horror movie in a haunted house"
-- "drama about family relationships"
-- "comedy with mistaken identity"
-- "thriller with plot twists"
-- "movie about artificial intelligence"
-- "adventure film set in jungle"
+- "cement for foundation work"
+- "steel rods for reinforcement"
+- "waterproofing material for roof"
+- "paint for exterior walls"
+- "tiles for bathroom flooring"
+- "sand for concrete mixing"
+- "bricks for wall construction"
+- "adhesive for tile installation"
+- "plywood for furniture making"
+- "metal pipes for plumbing"
 
 ## Architecture
 
@@ -190,16 +195,17 @@ Try these natural language queries:
 
 1. **api.py**: FastAPI application with REST endpoints
 2. **lib/semantic_search.py**: Core semantic search engine
-3. **data/movies.json**: Movie database
+3. **MongoDB Atlas**: Construction materials database
 4. **cache/**: Cached embeddings for fast search
 
 ### How It Works
 
-1. On first startup, the API loads the movie database
-2. It generates embeddings for all movies using sentence-transformers
-3. Embeddings are cached to disk for fast subsequent startups
-4. Search queries are embedded and compared using cosine similarity
-5. Top matching movies are returned with similarity scores
+1. On first startup, the API connects to MongoDB Atlas
+2. It fetches all construction materials from the database
+3. It generates embeddings for all materials using sentence-transformers
+4. Embeddings are cached to disk for fast subsequent startups
+5. Search queries are embedded and compared using cosine similarity
+6. Top matching materials are returned with similarity scores and details
 
 ### Model
 
@@ -218,8 +224,7 @@ materialmoversearch/
 ├── api.py                  # Main FastAPI application
 ├── lib/
 │   └── semantic_search.py  # Search engine implementation
-├── data/
-│   └── movies.json         # Movie database (5,000 movies)
+├── .env                    # MongoDB connection credentials
 ├── cache/                  # Auto-generated embeddings cache
 ├── main.py                 # Info script (run for instructions)
 ├── pyproject.toml          # Dependencies
@@ -227,21 +232,15 @@ materialmoversearch/
 └── QUICKSTART.md           # Quick start guide
 ```
 
-### Adding Movies
+### Updating Materials
 
-Edit `data/movies.json` and add new movies in the format:
-```json
-{
-  "id": 123,
-  "title": "Movie Title",
-  "description": "Movie description..."
-}
-```
+Materials are stored in MongoDB Atlas. To update the search index after changing the database:
 
-Then rebuild the cache:
 ```bash
 curl -X POST "http://localhost:8000/rebuild-cache"
 ```
+
+This will fetch the latest materials from MongoDB and regenerate the embeddings.
 
 ### Configuration
 
@@ -269,8 +268,8 @@ CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
 
 Build and run:
 ```bash
-docker build -t movie-search-api .
-docker run -p 8000:8000 movie-search-api
+docker build -t material-search-api .
+docker run -p 8000:8000 -e MONGODB_URI="your-connection-string" material-search-api
 ```
 
 ### Using Production ASGI Server
@@ -285,19 +284,21 @@ gunicorn api:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind
 
 ### Environment Variables
 
-Set these for production:
+Set these for production (create a `.env` file):
 ```bash
-export CORS_ORIGINS="https://yourdomain.com"
-export API_HOST="0.0.0.0"
-export API_PORT="8000"
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
+MONGODB_DATABASE=product
+MONGODB_COLLECTION=Material-Mover
+CORS_ORIGINS=https://yourdomain.com
 ```
 
 ## Performance
 
-- **First startup**: 30-60 seconds (builds embeddings cache)
+- **First startup**: 30-60 seconds (fetches from MongoDB, builds embeddings cache)
 - **Subsequent startups**: 1-2 seconds (loads from cache)
 - **Search latency**: < 100ms for typical queries
 - **Throughput**: ~100-500 requests/second (single worker)
+- **Database**: ~1000 construction materials indexed
 
 ## Troubleshooting
 
@@ -309,10 +310,17 @@ rm -rf cache/
 The cache will be rebuilt on next startup.
 
 ### Memory Usage
-The API loads all embeddings into memory. For very large databases (>100k movies), consider:
+The API loads all embeddings into memory. For very large databases (>100k materials), consider:
 - Using a vector database (Pinecone, Weaviate, Qdrant)
 - Implementing batch processing
 - Increasing server RAM
+
+### MongoDB Connection Issues
+If you can't connect to MongoDB:
+- Check your connection string in `.env`
+- Verify network access in MongoDB Atlas (whitelist your IP)
+- Ensure credentials are correct
+- Test connection with MongoDB Compass
 
 ### Model Download
 On first run, sentence-transformers downloads the model (~90MB). Ensure:

@@ -1,5 +1,5 @@
 """
-FastAPI-based semantic movie search API.
+FastAPI-based semantic construction material search API.
 """
 from typing import List, Optional
 from contextlib import asynccontextmanager
@@ -8,11 +8,11 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from lib.semantic_search import MovieSemanticSearch
+from lib.semantic_search import MaterialSemanticSearch
 
 
 # Global search engine instance
-search_engine: Optional[MovieSemanticSearch] = None
+search_engine: Optional[MaterialSemanticSearch] = None
 
 
 @asynccontextmanager
@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
     """Initialize the search engine on startup."""
     global search_engine
     print("Initializing semantic search engine...")
-    search_engine = MovieSemanticSearch()
+    search_engine = MaterialSemanticSearch()
     print("Search engine ready!")
     yield
     print("Shutting down...")
@@ -28,8 +28,8 @@ async def lifespan(app: FastAPI):
 
 # Create FastAPI app
 app = FastAPI(
-    title="Movie Semantic Search API",
-    description="Search for movies using natural language queries powered by sentence transformers",
+    title="Construction Material Semantic Search API",
+    description="Search for construction materials using natural language queries powered by sentence transformers",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -45,11 +45,15 @@ app.add_middleware(
 
 
 # Pydantic models for API
-class Movie(BaseModel):
-    """Movie model."""
-    id: int
+class Material(BaseModel):
+    """Construction material model."""
+    id: str
     title: str
     description: str
+    price: float
+    quantity: int
+    category: str
+    image: str
     similarity_score: float = Field(..., description="Similarity score between 0 and 1")
 
 
@@ -63,21 +67,21 @@ class SearchRequest(BaseModel):
 class SearchResponse(BaseModel):
     """Search response model."""
     query: str
-    results: List[Movie]
+    results: List[Material]
     count: int
 
 
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str
-    total_movies: int
+    total_materials: int
 
 
 @app.get("/", tags=["General"])
 async def root():
     """Root endpoint with API information."""
     return {
-        "message": "Movie Semantic Search API",
+        "message": "Construction Material Semantic Search API",
         "version": "1.0.0",
         "endpoints": {
             "search": "/search",
@@ -92,34 +96,35 @@ async def health_check():
     """
     Health check endpoint.
     
-    Returns the API status and total number of movies indexed.
+    Returns the API status and total number of construction materials indexed.
     """
     if search_engine is None:
         raise HTTPException(status_code=503, detail="Search engine not initialized")
     
     return {
         "status": "healthy",
-        "total_movies": len(search_engine.movies)
+        "total_materials": len(search_engine.materials)
     }
 
 
 @app.get("/search", response_model=SearchResponse, tags=["Search"])
-async def search_movies(
+async def search_materials(
     query: str = Query(..., description="Natural language search query", min_length=1),
     top_k: int = Query(5, description="Number of results to return", ge=1, le=50),
     min_score: float = Query(0.0, description="Minimum similarity score (0-1)", ge=0.0, le=1.0)
 ):
     """
-    Search for movies using semantic similarity.
+    Search for construction materials using semantic similarity.
     
     This endpoint accepts a natural language query and returns the most semantically
-    similar movies from the database.
+    similar construction materials from the database.
     
     **Example queries:**
-    - "action movie with explosions"
-    - "romantic comedy set in new york"
-    - "sci-fi thriller about time travel"
-    - "family friendly animated adventure"
+    - "cement for foundation work"
+    - "steel rods for reinforcement"
+    - "waterproofing material for roof"
+    - "paint for exterior walls"
+    - "tiles for bathroom flooring"
     
     **Parameters:**
     - **query**: Your search query in natural language
@@ -127,7 +132,7 @@ async def search_movies(
     - **min_score**: Minimum similarity score threshold (0-1, default: 0.0)
     
     **Returns:**
-    - List of movies with their similarity scores
+    - List of construction materials with their similarity scores, prices, and details
     """
     if search_engine is None:
         raise HTTPException(status_code=503, detail="Search engine not initialized")
@@ -149,9 +154,9 @@ async def search_movies(
 
 
 @app.post("/search", response_model=SearchResponse, tags=["Search"])
-async def search_movies_post(request: SearchRequest):
+async def search_materials_post(request: SearchRequest):
     """
-    Search for movies using semantic similarity (POST version).
+    Search for construction materials using semantic similarity (POST version).
     
     Same as GET /search but accepts a JSON body instead of query parameters.
     Useful for longer queries or when building API clients.
@@ -159,7 +164,7 @@ async def search_movies_post(request: SearchRequest):
     **Example request body:**
     ```json
     {
-        "query": "action movie with explosions",
+        "query": "cement bags for foundation",
         "top_k": 10,
         "min_score": 0.3
     }
@@ -189,8 +194,8 @@ async def rebuild_cache():
     """
     Rebuild the embeddings cache.
     
-    Use this endpoint if you've updated the movies data and want to regenerate
-    the embeddings. This operation may take several minutes.
+    Use this endpoint if you've updated the construction materials data in MongoDB
+    and want to regenerate the embeddings. This operation may take a minute or two.
     
     **Warning:** This is a heavy operation and will block the API while running.
     """
@@ -201,8 +206,8 @@ async def rebuild_cache():
         search_engine.rebuild_cache()
         return {
             "status": "success",
-            "message": "Cache rebuilt successfully",
-            "total_movies": len(search_engine.movies)
+            "message": "Cache rebuilt successfully from MongoDB",
+            "total_materials": len(search_engine.materials)
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cache rebuild error: {str(e)}")

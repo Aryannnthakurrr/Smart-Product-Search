@@ -1,22 +1,25 @@
 """
-Semantic search engine for movies using sentence transformers.
+Semantic search engine for construction materials using sentence transformers.
 """
-import json
 import os
 import pickle
 from pathlib import Path
 from typing import List, Dict, Any
+from dotenv import load_dotenv
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
+from pymongo import MongoClient
+
+# Load environment variables
+load_dotenv()
 
 
-class MovieSemanticSearch:
-    """Semantic search engine for movies."""
+class MaterialSemanticSearch:
+    """Semantic search engine for construction materials."""
     
     def __init__(
         self, 
-        movies_path: str = "data/movies.json",
         cache_dir: str = "cache",
         model_name: str = "all-MiniLM-L6-v2"
     ):
@@ -24,18 +27,21 @@ class MovieSemanticSearch:
         Initialize the semantic search engine.
         
         Args:
-            movies_path: Path to the movies JSON file
             cache_dir: Directory to store cached embeddings
             model_name: Name of the sentence transformer model to use
         """
-        self.movies_path = movies_path
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(exist_ok=True)
         self.model_name = model_name
         
+        # MongoDB connection
+        self.mongodb_uri = os.getenv("MONGODB_URI")
+        self.mongodb_database = os.getenv("MONGODB_DATABASE", "product")
+        self.mongodb_collection = os.getenv("MONGODB_COLLECTION", "Material-Mover")
+        
         # Cache file paths
-        self.embeddings_cache = self.cache_dir / "movie_embeddings.pkl"
-        self.movies_cache = self.cache_dir / "movies_data.pkl"
+        self.embeddings_cache = self.cache_dir / "material_embeddings.pkl"
+        self.materials_cache = self.cache_dir / "materials_data.pkl"
         
         # Load model
         print(f"Loading model: {model_name}...")
@@ -46,38 +52,63 @@ class MovieSemanticSearch:
         
     def _load_or_build_cache(self):
         """Load cached embeddings or build them if not available."""
-        if self.embeddings_cache.exists() and self.movies_cache.exists():
+        if self.embeddings_cache.exists() and self.materials_cache.exists():
             print("Loading cached embeddings...")
             with open(self.embeddings_cache, "rb") as f:
                 self.embeddings = pickle.load(f)
-            with open(self.movies_cache, "rb") as f:
-                self.movies = pickle.load(f)
-            print(f"Loaded {len(self.movies)} movies from cache.")
+            with open(self.materials_cache, "rb") as f:
+                self.materials = pickle.load(f)
+            print(f"Loaded {len(self.materials)} construction materials from cache.")
         else:
             print("Building embeddings cache...")
             self._build_cache()
             
     def _build_cache(self):
-        """Build embeddings for all movies and cache them."""
-        # Load movies
-        print(f"Loading movies from {self.movies_path}...")
-        with open(self.movies_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            self.movies = data["movies"]
+        """Build embeddings for all construction materials from MongoDB and cache them."""
+        # Connect to MongoDB
+        print(f"Connecting to MongoDB...")
+        client = MongoClient(self.mongodb_uri)
+        db = client[self.mongodb_database]
+        collection = db[self.mongodb_collection]
         
-        print(f"Loaded {len(self.movies)} movies.")
+        # Fetch all materials
+        print(f"Fetching construction materials from MongoDB...")
+        print(f"Database: {self.mongodb_database}, Collection: {self.mongodb_collection}")
+        
+        # Check if collection exists and has documents
+        total_docs = collection.count_documents({})
+        print(f"Total documents in collection: {total_docs}")
+        
+        cursor = collection.find({})
+        self.materials = []
+        
+        for doc in cursor:
+            # Convert ObjectId to string for JSON serialization
+            material = {
+                "id": str(doc["_id"]),
+                "title": doc.get("title", ""),
+                "description": doc.get("description", ""),
+                "price": doc.get("price", 0),
+                "quantity": doc.get("quantity", 0),
+                "category": doc.get("category", ""),
+                "image": doc.get("image", "")
+            }
+            self.materials.append(material)
+        
+        client.close()
+        print(f"Loaded {len(self.materials)} construction materials from database.")
         
         # Create text representations for embedding
-        movie_texts = []
-        for movie in self.movies:
-            # Combine title and description for better semantic matching
-            text = f"{movie['title']}. {movie['description']}"
-            movie_texts.append(text)
+        material_texts = []
+        for material in self.materials:
+            # Combine title, category, and description for better semantic matching
+            text = f"{material['title']}. Category: {material['category']}. {material['description']}"
+            material_texts.append(text)
         
         # Generate embeddings
         print("Generating embeddings... This may take a few minutes on first run.")
         self.embeddings = self.model.encode(
-            movie_texts,
+            material_texts,
             show_progress_bar=True,
             convert_to_numpy=True
         )
@@ -86,8 +117,8 @@ class MovieSemanticSearch:
         print("Saving embeddings to cache...")
         with open(self.embeddings_cache, "wb") as f:
             pickle.dump(self.embeddings, f)
-        with open(self.movies_cache, "wb") as f:
-            pickle.dump(self.movies, f)
+        with open(self.materials_cache, "wb") as f:
+            pickle.dump(self.materials, f)
         
         print("Cache built successfully!")
         
@@ -98,7 +129,7 @@ class MovieSemanticSearch:
         min_score: float = 0.0
     ) -> List[Dict[str, Any]]:
         """
-        Search for movies semantically similar to the query.
+        Search for construction materials semantically similar to the query.
         
         Args:
             query: Search query string
@@ -106,7 +137,7 @@ class MovieSemanticSearch:
             min_score: Minimum similarity score (0-1) for results
             
         Returns:
-            List of movie dictionaries with similarity scores
+            List of material dictionaries with similarity scores
         """
         # Encode query
         query_embedding = self.model.encode(query, convert_to_numpy=True)
@@ -124,9 +155,9 @@ class MovieSemanticSearch:
         for idx in top_indices:
             score = float(similarities[idx])
             if score >= min_score:
-                movie = self.movies[idx].copy()
-                movie["similarity_score"] = round(score, 4)
-                results.append(movie)
+                material = self.materials[idx].copy()
+                material["similarity_score"] = round(score, 4)
+                results.append(material)
         
         return results
     
@@ -135,6 +166,6 @@ class MovieSemanticSearch:
         print("Rebuilding cache...")
         if self.embeddings_cache.exists():
             self.embeddings_cache.unlink()
-        if self.movies_cache.exists():
-            self.movies_cache.unlink()
+        if self.materials_cache.exists():
+            self.materials_cache.unlink()
         self._build_cache()
