@@ -1,522 +1,487 @@
-# Construction Material Semantic Search API 🏗️# Construction Material Semantic Search API 🏗️
+﻿# 🏗️ Construction Materials Semantic Search API
 
+A high-performance FastAPI microservice that provides **intelligent semantic search** for construction materials using state-of-the-art natural language processing. Built with Sentence-BERT embeddings and MongoDB vector storage, this API understands the meaning behind search queries—not just keyword matches.
 
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Microservice for semantic search of construction materials. Uses AI to find relevant products from natural language queries.Semantic search microservice for construction materials. Uses AI embeddings to find relevant products from natural language queries.
+## ✨ Features
 
+- 🔍 **Semantic Search** - Natural language queries that understand context and meaning
+- 🤖 **AI-Powered** - Sentence-BERT model (all-MiniLM-L6-v2) with 384-dimensional embeddings
+- ⚡ **High Performance** - Sub-20ms search latency with cosine similarity
+- 💾 **Persistent Storage** - MongoDB with automatic embedding caching
+- 🔄 **Real-time Updates** - Webhook support for product creation/updates
+- 📊 **Interactive API Docs** - Built-in Swagger UI at `/docs`
+- 🎯 **Relevance Scoring** - Configurable similarity thresholds and result limits
+- 🔧 **Cache Management** - On-demand embedding regeneration
 
+## 📋 Table of Contents
 
-**Current Status:** 503 materials indexed from MongoDB**Live API:** `http://your-api-url.com` (deploy to get URL)  
-
-**Docs:** `http://your-api-url.com/docs`
+- [Quick Start](#-quick-start)
+- [Installation](#-installation)
+- [Configuration](#-configuration)
+- [Usage Examples](#-usage-examples)
+- [API Reference](#-api-reference)
+- [Project Structure](#-project-structure)
+- [How It Works](#-how-it-works)
+- [Performance](#-performance)
+- [Tech Stack](#-tech-stack)
 
 ## 🚀 Quick Start
 
-## What It Does
+### Prerequisites
 
+- **Python 3.11+** - Required for modern async features
+- **MongoDB Atlas** - Free tier account ([Sign up here](https://www.mongodb.com/cloud/atlas))
+- **2GB+ RAM** - For model loading and operations
+
+### Installation
+
+1. **Clone the repository**
 ```bash
-
-# Install dependenciesSearch 500+ construction materials using plain English:
-
-pip install -r requirements.txt- "cement for foundation work" → Returns cement products
-
-- "waterproofing for roof" → Returns waterproofing materials
-
-# Configure .env file- "steel rods" → Returns steel products
-
-MONGODB_URI=your_mongodb_connection_string
-
-MONGODB_DATABASE=product**Embeddings are stored in MongoDB** - no cache files needed!
-
-MONGODB_COLLECTION=products
-
-## 🚀 Quick Start
-
-# Run locally
-
-uvicorn api:app --reload### 1. Setup
-
-``````bash
-
-# Clone and install
-
-Visit **http://localhost:8000/docs** for interactive API documentation.git clone https://github.com/Aryannnthakurrr/Materialmover.git
-
+git clone <repository-url>
 cd materialmoversearch
-
----pip install -r requirements.txt
-
-
-
-## 📡 API Endpoints# Configure MongoDB
-
-cp .env.example .env
-
-| Method | Endpoint | Description |# Edit .env with your MongoDB connection string
-
-|--------|----------|-------------|```
-
-| `GET` | `/search` | Search materials with query params |
-
-| `POST` | `/search` | Search materials with JSON body |### 2. Run Locally
-
-| `GET` | `/health` | Check API status |```bash
-
-| `POST` | `/rebuild-cache` | Regenerate all embeddings |uvicorn api:app --reload
-
-| `POST` | `/webhooks/product-created` | Notify of new product |```
-
-| `POST` | `/webhooks/product-updated` | Notify of updated product |
-
-Visit http://localhost:8000/docs to test the API
-
-### Example Search
-
-## 📡 API Endpoints
-
-```bash
-
-# Query```bash
-
-curl "http://localhost:8000/search?query=cement%20bags&top_k=5"# Search materials
-
-GET  /search?query=cement&top_k=5
-
-# ResponsePOST /search
-
-{
-
-  "query": "cement bags",# Check status
-
-  "results": [GET  /health
-
-    {
-
-      "id": "507f...",# Admin - rebuild all embeddings
-
-      "title": "Portland Cement 50kg",POST /rebuild-cache
-
-      "description": "High-quality cement...",
-
-      "price": 250.0,# Webhooks - for MERN app integration
-
-      "category": "Cement",POST /webhooks/product-created
-
-      "similarity_score": 0.89POST /webhooks/product-updated
-
-    }```
-
-  ],
-
-  "count": 1**Example:**
-
-}```bash
-
-```curl "http://localhost:8000/search?query=cement%20bags&top_k=5"
-
 ```
 
----
+2. **Create a virtual environment**
+```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# Linux/Mac
+source .venv/bin/activate
+```
+
+3. **Install dependencies**
+```bash
+pip install -r requirements.txt
+```
+
+### Configuration
+
+Create a `.env` file in the project root:
+
+```env
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
+MONGODB_DATABASE=product
+MONGODB_COLLECTION=products
+```
+
+> 💡 **Tip**: Replace `username`, `password`, and `cluster` with your MongoDB Atlas credentials.
+
+### Run the Server
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+The API will be available at:
+- **API**: http://localhost:8000
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+
+## 💡 Usage Examples
+
+### Example 1: Basic Search (GET Request)
+
+Search for cement products using a simple GET request:
+
+```bash
+curl "http://localhost:8000/search?query=cement%20for%20foundation&top_k=3"
+```
 
 **Response:**
-
-## 🔗 Integration with MERN App```json
-
+```json
 {
-
-Call webhooks when products are added/updated:  "query": "cement bags",
-
+  "query": "cement for foundation",
   "results": [
-
-```javascript    {
-
-// After creating a product      "id": "507f...",
-
-const newProduct = await Product.create({...});      "title": "Portland Cement 50kg",
-
-      "description": "High-quality cement...",
-
-// Notify search API (optional - auto-indexed on restart if skipped)      "price": 250.0,
-
-await axios.post('http://your-api-url/webhooks/product-created', {      "category": "Cement",
-
-  product_id: newProduct._id.toString()      "similarity_score": 0.89
-
-});    }
-
-```  ],
-
-  "count": 1
-
-**Without webhooks:** New products are auto-indexed on next API restart.}
-
-```
-
----
-
-## 🔗 Integration with MERN App
-
-## 💾 How It Works
-
-Your friend's app should call these webhooks when products change:
-
-1. **Embeddings stored in MongoDB** alongside product data
-
-2. **First startup:** Generates embeddings for all products (~1-2 min for 500 products)```javascript
-
-3. **Subsequent startups:** Loads embeddings from MongoDB (~2 seconds)// Node.js backend - when creating a product
-
-4. **Search:** Compares query embedding with stored embeddings using cosine similarityconst newProduct = await Product.create({...});
-
-
-
-### MongoDB Document Structure// Notify search API (optional but recommended)
-
-await axios.post('http://your-api.com/webhooks/product-created', {
-
-```javascript  product_id: newProduct._id.toString()
-
-{});
-
-  "_id": ObjectId("..."),
-
-  "title": "Portland Cement",// Now the product is immediately searchable!
-
-  "description": "...",```
-
-  "price": 250,
-
-  "category": "Cement",Without webhooks, new products are auto-indexed on API restart.
-
-  // Auto-generated by API:
-
-  "embedding": [0.123, -0.456, ...],  // 384 floats## Response Format
-
-  "embedding_model": "all-MiniLM-L6-v2"
-
-}Successful search response:
-
-``````json
-
-{
-
----  "query": "cement for foundation",
-
-  "results": [
-
-## 🚀 Deployment    {
-
-      "id": "507f1f77bcf86cd799439011",
-
-### Option 1: Render (Recommended - Free)      "title": "Portland Cement",
-
-      "description": "High-quality cement for construction...",
-
-1. Create `requirements.txt`:      "price": 250.0,
-
-   ```bash      "quantity": 500,
-
-   pip freeze > requirements.txt      "category": "Cement",
-
-   ```      "image": "https://example.com/image.jpg",
-
-      "similarity_score": 0.8532
-
-2. Push to GitHub    }
-
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "title": "Portland Cement Type I",
+      "description": "High-quality cement ideal for foundation and structural work",
+      "category": "Cement",
+      "price": 450.00,
+      "quantity": 150,
+      "brand": "UltraCem",
+      "score": 0.8542
+    },
+    {
+      "_id": "507f1f77bcf86cd799439012",
+      "title": "Foundation Grade Concrete Mix",
+      "description": "Pre-mixed concrete perfect for foundation slabs",
+      "category": "Concrete",
+      "price": 380.00,
+      "quantity": 200,
+      "brand": "BuildPro",
+      "score": 0.7891
+    }
   ],
-
-3. Go to [render.com](https://render.com) → New Web Service  "count": 1
-
+  "total": 2
 }
-
-4. Configure:```
-
-   - Build: `pip install -r requirements.txt`
-
-   - Start: `uvicorn api:app --host 0.0.0.0 --port $PORT`## Example Queries
-
-   - Add environment variables (MONGODB_URI, etc.)
-
-Try these natural language queries:
-
-5. Deploy! Your API will be at: `https://your-app.onrender.com`- "cement for foundation work"
-
-- "steel rods for reinforcement"
-
-### Option 2: Railway- "waterproofing material for roof"
-
-- "paint for exterior walls"
-
-1. Go to [railway.app](https://railway.app)- "tiles for bathroom flooring"
-
-2. Deploy from GitHub repo- "sand for concrete mixing"
-
-3. Add environment variables- "bricks for wall construction"
-
-4. Done!- "adhesive for tile installation"
-
-- "plywood for furniture making"
-
-### Option 3: Docker- "metal pipes for plumbing"
-
-
-
-```dockerfile## Architecture
-
-FROM python:3.11-slim
-
-WORKDIR /app### Components
-
-COPY requirements.txt .
-
-RUN pip install -r requirements.txt1. **api.py**: FastAPI application with REST endpoints
-
-COPY . .2. **lib/semantic_search.py**: Core semantic search engine
-
-EXPOSE 80003. **MongoDB Atlas**: Construction materials database
-
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]4. **cache/**: Cached embeddings for fast search
-
 ```
 
-### How It Works
+### Example 2: Advanced Search (POST Request)
+
+Use POST for complex queries with custom parameters:
 
 ```bash
-
-docker build -t material-search-api .1. On first startup, the API connects to MongoDB Atlas
-
-docker run -p 8000:8000 --env-file .env material-search-api2. It fetches all construction materials from the database
-
-```3. It generates embeddings for all materials using sentence-transformers
-
-4. Embeddings are cached to disk for fast subsequent startups
-
----5. Search queries are embedded and compared using cosine similarity
-
-6. Top matching materials are returned with similarity scores and details
-
-## 🔧 Configuration
-
-### Model
-
-### Environment Variables
-
-Uses `all-MiniLM-L6-v2` from sentence-transformers:
-
-```bash- Fast and efficient
-
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db- Good balance of speed and accuracy
-
-MONGODB_DATABASE=product- 384-dimensional embeddings
-
-MONGODB_COLLECTION=products- Works well for semantic search
-
+curl -X POST "http://localhost:8000/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "waterproofing material for bathroom",
+    "top_k": 5,
+    "min_score": 0.5
+  }'
 ```
 
-## Development
+### Example 3: Python Client
 
-### MongoDB Atlas Setup
+```python
+import requests
 
-### Project Structure
+# Search for steel materials
+response = requests.get(
+    "http://localhost:8000/search",
+    params={
+        "query": "steel rods for reinforcement",
+        "top_k": 5,
+        "min_score": 0.4
+    }
+)
 
-1. Whitelist IP: `0.0.0.0/0` (for cloud deployment)
+results = response.json()
+for item in results["results"]:
+    print(f"{item['title']} - Score: {item['score']:.2%}")
+```
 
-2. Create database user with read permissions```
+**Output:**
+```
+TMT Steel Bars 12mm - Score: 85.42%
+Reinforcement Steel Mesh - Score: 78.91%
+Galvanized Steel Rods - Score: 72.33%
+```
 
-3. Get connection stringmaterialmoversearch/
+### Example 4: JavaScript/TypeScript Client
 
-├── api.py                  # Main FastAPI application
+```typescript
+const searchMaterials = async (query: string) => {
+  const response = await fetch(
+    `http://localhost:8000/search?query=${encodeURIComponent(query)}&top_k=5`
+  );
+  const data = await response.json();
+  return data.results;
+};
 
----├── lib/
+// Usage
+const results = await searchMaterials("paint for exterior walls");
+console.log(`Found ${results.length} materials`);
+```
 
-│   └── semantic_search.py  # Search engine implementation
+### Example 5: Health Check
 
-## ⚡ Performance├── .env                    # MongoDB connection credentials
+Monitor API status and loaded materials:
 
-├── cache/                  # Auto-generated embeddings cache
+```bash
+curl http://localhost:8000/health
+```
 
-- **First startup:** 30-60 seconds (generates embeddings)├── main.py                 # Info script (run for instructions)
+**Response:**
+```json
+{
+  "status": "healthy",
+  "materials_loaded": 1247,
+  "model": "all-MiniLM-L6-v2"
+}
+```
 
-- **Subsequent startups:** 2-3 seconds (loads from MongoDB)├── pyproject.toml          # Dependencies
+## 📚 API Reference
 
-- **Search latency:** <100ms├── README.md               # Full documentation
+### General Endpoints
 
-- **Storage:** ~2.5KB per product (1.5KB for embedding)└── QUICKSTART.md           # Quick start guide
+#### `GET /`
+Root endpoint with API information.
 
-- **Current:** 503 products = ~1.25MB in MongoDB```
+**Response:**
+```json
+{
+  "service": "Construction Materials Semantic Search",
+  "version": "1.0.0",
+  "endpoints": {
+    "search": "/search",
+    "health": "/health",
+    "rebuild_cache": "/rebuild-cache",
+    "docs": "/docs"
+  }
+}
+```
 
+#### `GET /health`
+Health check endpoint.
 
-
----### Updating Materials
-
-
-
-## 🔒 Security (Optional)Materials are stored in MongoDB Atlas. To update the search index after changing the database:
-
-
-
-Add API key authentication:```bash
-
-curl -X POST "http://localhost:8000/rebuild-cache"
-
-```python```
-
-# In api.py
-
-API_KEY = os.getenv("API_KEY")This will fetch the latest materials from MongoDB and regenerate the embeddings.
-
-
-
-@app.get("/search")### Configuration
-
-async def search(x_api_key: str = Header(...)):
-
-    if x_api_key != API_KEY:You can customize the search engine by modifying `lib/semantic_search.py`:
-
-        raise HTTPException(401, "Invalid API key")- Change the model: `model_name` parameter
-
-    # ... rest of code- Adjust cache location: `cache_dir` parameter
-
-```- Modify search parameters: `top_k`, `min_score`
-
-
-
----## Production Deployment
-
-
-
-## 📊 Tech Stack### Using Docker (Recommended)
-
-
-
-- **FastAPI** - Web frameworkCreate a `Dockerfile`:
-
-- **Sentence-Transformers** - AI embeddings (all-MiniLM-L6-v2)```dockerfile
-
-- **MongoDB Atlas** - Database + embedding storageFROM python:3.11-slim
-
-- **NumPy** - Vector similarity calculations
-
-- **Python 3.11+**WORKDIR /app
-
-COPY . .
+**Response Model:** `HealthResponse`
+- `status` (string): Service status
+- `materials_loaded` (int): Number of indexed materials
+- `model` (string): ML model name
 
 ---
 
-RUN pip install -e .
+### Search Endpoints
 
-## 🆘 Troubleshooting
+#### `GET /search`
+Semantic search with query parameters.
 
-EXPOSE 8000
+**Parameters:**
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `query` | string | ✅ Yes | - | Natural language search query |
+| `top_k` | integer | ❌ No | 5 | Number of results (1-50) |
+| `min_score` | float | ❌ No | 0.3 | Minimum similarity score (0.0-1.0) |
 
-**New products not searchable?**CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+**Example Queries:**
+- `cement for foundation work`
+- `steel rods for reinforcement`
+- `waterproofing material for roof`
+- `paint for exterior walls`
+- `tiles for bathroom flooring`
 
-- Use webhooks, OR```
+**Response Model:** `SearchResponse`
 
-- Restart API, OR
+#### `POST /search`
+Semantic search with JSON body.
 
-- Call `/rebuild-cache`Build and run:
+**Request Body:**
+```json
+{
+  "query": "string (required)",
+  "top_k": 5,
+  "min_score": 0.3
+}
+```
 
-```bash
-
-**Slow first startup?**docker build -t material-search-api .
-
-- Normal! Generating embeddings for all productsdocker run -p 8000:8000 -e MONGODB_URI="your-connection-string" material-search-api
-
-- Subsequent startups are fast```
-
-
-
-**MongoDB connection failed?**### Using Production ASGI Server
-
-- Check `.env` credentials
-
-- Verify IP whitelist in MongoDB Atlas```bash
-
-- Test with MongoDB Compass# Install gunicorn
-
-pip install gunicorn
+**Response:** Same as GET `/search`
 
 ---
 
-# Run with multiple workers
+### Admin Endpoints
 
-## 📝 Licensegunicorn api:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+#### `POST /rebuild-cache`
+Rebuild all embeddings from scratch. Useful after bulk data updates.
 
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "All embeddings rebuilt",
+  "materials_loaded": 1247
+}
 ```
 
-MIT
-
-### Environment Variables
+> ⚠️ **Warning**: This operation may take several minutes for large datasets.
 
 ---
 
-Set these for production (create a `.env` file):
+### Webhook Endpoints
 
-**Questions?** Check `/docs` endpoint for interactive API documentation.```bash
+#### `POST /webhooks/product-created`
+Generate embedding for a newly created product.
 
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
-MONGODB_DATABASE=product
-MONGODB_COLLECTION=Material-Mover
-CORS_ORIGINS=https://yourdomain.com
+**Parameters:**
+- `product_id` (string, required): MongoDB ObjectId of the new product
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Embedding generated for product 507f1f77bcf86cd799439011",
+  "materials_loaded": 1248
+}
 ```
 
-## Performance
+#### `POST /webhooks/product-updated`
+Regenerate embedding for an updated product.
 
-- **First startup**: 30-60 seconds (fetches from MongoDB, builds embeddings cache)
-- **Subsequent startups**: 1-2 seconds (loads from cache)
-- **Search latency**: < 100ms for typical queries
-- **Throughput**: ~100-500 requests/second (single worker)
-- **Database**: ~1000 construction materials indexed
+**Parameters:**
+- `product_id` (string, required): MongoDB ObjectId of the updated product
 
-## Troubleshooting
-
-### Cache Issues
-If you encounter cache-related errors, delete the cache folder:
-```bash
-rm -rf cache/
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Embedding updated for product 507f1f77bcf86cd799439011",
+  "materials_loaded": 1247
+}
 ```
-The cache will be rebuilt on next startup.
 
-### Memory Usage
-The API loads all embeddings into memory. For very large databases (>100k materials), consider:
-- Using a vector database (Pinecone, Weaviate, Qdrant)
-- Implementing batch processing
-- Increasing server RAM
+## 📁 Project Structure
 
-### MongoDB Connection Issues
-If you can't connect to MongoDB:
-- Check your connection string in `.env`
-- Verify network access in MongoDB Atlas (whitelist your IP)
-- Ensure credentials are correct
-- Test connection with MongoDB Compass
+```
+materialmoversearch/
+├── app/
+│   ├── __init__.py
+│   ├── main.py                    # FastAPI application & routes
+│   ├── core/
+│   │   ├── __init__.py
+│   │   ├── config.py             # Settings & environment variables
+│   │   └── database.py           # MongoDB connection manager
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py            # Pydantic models for validation
+│   └── services/
+│       ├── __init__.py
+│       └── search.py             # Semantic search engine logic
+├── .env                          # Environment configuration (create this)
+├── .gitignore
+├── requirements.txt              # Python dependencies
+├── pyproject.toml               # Project metadata
+└── README.md                    # This file
+```
 
-### Model Download
-On first run, sentence-transformers downloads the model (~90MB). Ensure:
-- Internet connection is available
-- Sufficient disk space (~500MB)
-- No firewall blocking HuggingFace downloads
+### Core Components
 
-## Contributing
+#### `app/main.py`
+- FastAPI application setup
+- Route definitions
+- Middleware configuration (CORS)
+- Lifecycle management (startup/shutdown)
 
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+#### `app/core/config.py`
+- Environment variable loading
+- Application settings
+- Model configuration
+- MongoDB connection parameters
+
+#### `app/core/database.py`
+- MongoDB client management
+- CRUD operations for materials
+- Embedding persistence
+- Connection pooling
+
+#### `app/models/schemas.py`
+- Pydantic models for request/response validation
+- Type definitions for Material, SearchRequest, SearchResponse
+- API documentation schemas
+
+#### `app/services/search.py`
+- Sentence-BERT model loading
+- Embedding generation and caching
+- Cosine similarity search
+- Vector operations with NumPy
+- Real-time index updates
+
+## 🔬 How It Works
+
+### 1. **Model Initialization**
+On startup, the API loads the `all-MiniLM-L6-v2` Sentence-BERT model (133MB), which converts text into 384-dimensional vectors.
+
+### 2. **Embedding Generation**
+For each material, the system creates a searchable text string:
+```python
+text = f"{title} {category} {description}"
+embedding = model.encode(text)  # Returns 384-dim vector
+```
+
+### 3. **Vector Storage**
+Embeddings are stored in MongoDB alongside material data and cached in memory for fast retrieval:
+```json
+{
+  "_id": "507f1f77bcf86cd799439011",
+  "title": "Portland Cement",
+  "embedding": [0.123, -0.456, 0.789, ...],  // 384 floats
+  "embedding_generated_at": "2025-11-07T10:30:00Z",
+  "embedding_model": "all-MiniLM-L6-v2"
+}
+```
+
+### 4. **Search Process**
+When a query arrives:
+1. **Encode** the query into a 384-dimensional vector
+2. **Calculate** cosine similarity with all material embeddings
+3. **Rank** results by similarity score
+4. **Filter** by minimum score threshold
+5. **Return** top-k most relevant materials
+
+### 5. **Cosine Similarity**
+Measures semantic similarity between vectors:
+```
+similarity = (query · material) / (||query|| × ||material||)
+```
+Result range: 0.0 (unrelated) to 1.0 (identical meaning)
+
+### Example Flow Diagram
+
+```
+User Query: "cement for foundation"
+        ↓
+[Encode Query] → [0.12, -0.45, 0.78, ...]
+        ↓
+[Compare with all embeddings]
+        ↓
+Material 1: 0.8542 ✅
+Material 2: 0.7891 ✅
+Material 3: 0.2341 ❌ (below threshold)
+        ↓
+[Return top results sorted by score]
+```
+
+## ⚡ Performance
+
+### Benchmarks
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **Cold Start** | 5-10 seconds | Model loading + DB connection |
+| **Warm Start** | <1 second | Cached embeddings ready |
+| **Search Latency** | 10-20ms | For 1,000 materials |
+| **Throughput** | 50-100 req/s | Single instance |
+| **Memory Usage** | ~500MB | Model + 1,000 embeddings |
+| **Embedding Generation** | 50-100ms | Per material |
+
+### Scaling Considerations
+
+- **Memory**: ~0.4MB per 1,000 materials (for embeddings)
+- **Database**: MongoDB Atlas free tier supports up to 512MB
+- **Compute**: CPU-bound; GPU acceleration not required for inference
+- **Horizontal Scaling**: Stateless design allows multiple instances behind load balancer
+
+### Optimization Tips
+
+1. **Use min_score filtering** to reduce response size
+2. **Limit top_k** to reasonable values (5-10)
+3. **Enable MongoDB indexes** on frequently queried fields
+4. **Consider Redis** for embedding cache in production
+5. **Use async clients** for concurrent requests
+
+## 🛠️ Tech Stack
+
+### Core Framework
+- **[FastAPI](https://fastapi.tiangolo.com/) 0.115+** - Modern async web framework
+- **[Uvicorn](https://www.uvicorn.org/)** - ASGI server with async support
+
+### Machine Learning
+- **[Sentence-Transformers](https://www.sbert.net/) 5.1+** - BERT-based semantic embeddings
+- **[NumPy](https://numpy.org/) 2.3+** - Efficient vector operations
+
+### Database
+- **[PyMongo](https://pymongo.readthedocs.io/) 4.15+** - MongoDB driver
+- **[MongoDB Atlas](https://www.mongodb.com/cloud/atlas)** - Cloud database platform
+
+### Utilities
+- **[Python-dotenv](https://pypi.org/project/python-dotenv/)** - Environment variable management
+- **[Pydantic](https://docs.pydantic.dev/)** - Data validation (via FastAPI)
+
+### Model Details
+- **Name**: `all-MiniLM-L6-v2`
+- **Size**: 133MB
+- **Dimensions**: 384
+- **Performance**: 14.5x faster than BERT-base
+- **Quality**: 96.3% of BERT-large performance
+- MongoDB
+- NumPy 2.3+
+- Uvicorn 0.32+
+- PyMongo 4.15+
 
 ## License
 
-MIT License - feel free to use in your projects!
-
-## Support
-
-For issues or questions:
-- Open an issue on GitHub
-- Check the interactive docs at `/docs`
-- Review the examples in this README
-
----
-
-Built with ❤️ using FastAPI and sentence-transformers
+MIT

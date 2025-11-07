@@ -1,0 +1,57 @@
+"""MongoDB database operations"""
+from typing import Dict, List, Optional
+from pymongo import MongoClient
+from bson import ObjectId
+from app.core.config import settings
+
+
+class DatabaseManager:
+    """Manages MongoDB database operations"""
+    
+    def __init__(self):
+        self.client: Optional[MongoClient] = None
+        self.db = None
+        self.collection = None
+    
+    def connect(self) -> None:
+        """Establish MongoDB connection"""
+        settings.validate()
+        self.client = MongoClient(settings.MONGODB_URI)
+        self.db = self.client[settings.MONGODB_DATABASE]
+        self.collection = self.db[settings.MONGODB_COLLECTION]
+    
+    def disconnect(self) -> None:
+        """Close MongoDB connection"""
+        if self.client:
+            self.client.close()
+    
+    def get_all_materials(self) -> List[Dict]:
+        """Retrieve all materials from database"""
+        if self.collection is None:
+            raise RuntimeError("Database not connected")
+        
+        materials = []
+        for doc in self.collection.find():
+            doc['_id'] = str(doc['_id'])
+            materials.append(doc)
+        return materials
+    
+    def update_embedding(self, material_id: str, embedding: List[float]) -> None:
+        """Update material embedding in database"""
+        if self.collection is None:
+            raise RuntimeError("Database not connected")
+        
+        self.collection.update_one(
+            {"_id": ObjectId(material_id)},
+            {"$set": {"embedding": embedding}}
+        )
+    
+    def find_by_id(self, material_id: str) -> Optional[Dict]:
+        """Find material by ID"""
+        if self.collection is None:
+            raise RuntimeError("Database not connected")
+        
+        doc = self.collection.find_one({"_id": ObjectId(material_id)})
+        if doc:
+            doc['_id'] = str(doc['_id'])
+        return doc
