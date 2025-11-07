@@ -1,291 +1,461 @@
-# Construction Material Semantic Search API �️
+# Construction Material Semantic Search API 🏗️# Construction Material Semantic Search API 🏗️
 
-A powerful semantic search API for construction materials powered by FastAPI and sentence transformers. Search for construction materials from MongoDB using natural language queries and get semantically relevant results.
 
-## Features
 
-- 🔍 **Semantic Search**: Find construction materials using natural language queries
-- ⚡ **Fast Performance**: Cached embeddings for instant search results
-- 🎯 **Accurate Results**: Powered by sentence-transformers
-- 📊 **Relevance Scores**: Each result includes a similarity score
-- 💾 **MongoDB Integration**: Real-time data from MongoDB Atlas
-- 🔄 **RESTful API**: Simple HTTP endpoints for easy integration
-- 📚 **Auto Documentation**: Interactive API docs at `/docs`
-- 🌐 **CORS Enabled**: Ready for frontend integration
+Microservice for semantic search of construction materials. Uses AI to find relevant products from natural language queries.Semantic search microservice for construction materials. Uses AI embeddings to find relevant products from natural language queries.
 
-## Quick Start
 
-### Installation
 
-1. Clone the repository:
+**Current Status:** 503 materials indexed from MongoDB**Live API:** `http://your-api-url.com` (deploy to get URL)  
+
+**Docs:** `http://your-api-url.com/docs`
+
+## 🚀 Quick Start
+
+## What It Does
+
 ```bash
-git clone <your-repo-url>
+
+# Install dependenciesSearch 500+ construction materials using plain English:
+
+pip install -r requirements.txt- "cement for foundation work" → Returns cement products
+
+- "waterproofing for roof" → Returns waterproofing materials
+
+# Configure .env file- "steel rods" → Returns steel products
+
+MONGODB_URI=your_mongodb_connection_string
+
+MONGODB_DATABASE=product**Embeddings are stored in MongoDB** - no cache files needed!
+
+MONGODB_COLLECTION=products
+
+## 🚀 Quick Start
+
+# Run locally
+
+uvicorn api:app --reload### 1. Setup
+
+``````bash
+
+# Clone and install
+
+Visit **http://localhost:8000/docs** for interactive API documentation.git clone https://github.com/Aryannnthakurrr/Materialmover.git
+
 cd materialmoversearch
-```
 
-2. Install dependencies (using uv or pip):
+---pip install -r requirements.txt
+
+
+
+## 📡 API Endpoints# Configure MongoDB
+
+cp .env.example .env
+
+| Method | Endpoint | Description |# Edit .env with your MongoDB connection string
+
+|--------|----------|-------------|```
+
+| `GET` | `/search` | Search materials with query params |
+
+| `POST` | `/search` | Search materials with JSON body |### 2. Run Locally
+
+| `GET` | `/health` | Check API status |```bash
+
+| `POST` | `/rebuild-cache` | Regenerate all embeddings |uvicorn api:app --reload
+
+| `POST` | `/webhooks/product-created` | Notify of new product |```
+
+| `POST` | `/webhooks/product-updated` | Notify of updated product |
+
+Visit http://localhost:8000/docs to test the API
+
+### Example Search
+
+## 📡 API Endpoints
+
 ```bash
-# Using uv (recommended)
-uv sync
 
-# Or using pip
-pip install -e .
-```
+# Query```bash
 
-### Running the API
+curl "http://localhost:8000/search?query=cement%20bags&top_k=5"# Search materials
 
-Start the server:
-```bash
-uvicorn api:app --reload
-```
+GET  /search?query=cement&top_k=5
 
-The API will be available at:
-- **API**: http://localhost:8000
-- **Interactive Docs**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+# ResponsePOST /search
 
-## API Endpoints
-
-### 🏠 Root
-**GET /** - API information and available endpoints
-
-### 🔍 Search Materials
-**GET /search** - Search for construction materials using semantic similarity
-
-Query Parameters:
-- `query` (required): Natural language search query
-- `top_k` (optional, default: 5): Number of results to return (1-50)
-- `min_score` (optional, default: 0.0): Minimum similarity score (0-1)
-
-Example:
-```bash
-curl "http://localhost:8000/search?query=cement%20for%20foundation&top_k=5"
-```
-
-**POST /search** - Same as GET but with JSON body
-
-Request Body:
-```json
 {
-  "query": "steel rods for reinforcement",
-  "top_k": 10,
-  "min_score": 0.3
-}
-```
 
-Example:
-```bash
-curl -X POST "http://localhost:8000/search" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "waterproofing material for roof", "top_k": 5}'
-```
+  "query": "cement bags",# Check status
 
-### ❤️ Health Check
-**GET /health** - Check API status and total materials indexed
+  "results": [GET  /health
 
-Example:
-```bash
-curl "http://localhost:8000/health"
-```
-
-### 🔄 Rebuild Cache
-**POST /rebuild-cache** - Rebuild embeddings cache (admin endpoint)
-
-Use this if you update the materials data in MongoDB.
-
-## Example Usage
-
-### Using cURL
-
-```bash
-# Simple search
-curl "http://localhost:8000/search?query=cement%20bags"
-
-# Search with parameters
-curl "http://localhost:8000/search?query=steel%20beams&top_k=10&min_score=0.3"
-
-# POST request
-curl -X POST "http://localhost:8000/search" \
-  -H "Content-Type: application/json" \
-  -d '{"query": "paint for exterior walls", "top_k": 5}'
-```
-
-### Using Python
-
-```python
-import requests
-
-# Search for materials
-response = requests.get(
-    "http://localhost:8000/search",
-    params={
-        "query": "cement for foundation work",
-        "top_k": 5,
-        "min_score": 0.2
-    }
-)
-
-results = response.json()
-print(f"Found {results['count']} materials:")
-for material in results['results']:
-    print(f"- {material['title']} (score: {material['similarity_score']}, price: ${material['price']})")
-```
-
-### Using JavaScript/Fetch
-
-```javascript
-// GET request
-const response = await fetch(
-  'http://localhost:8000/search?query=steel+rods&top_k=5'
-);
-const data = await response.json();
-console.log(data.results);
-
-// POST request
-const response = await fetch('http://localhost:8000/search', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    query: 'waterproofing for roof',
-    top_k: 10
-  })
-});
-const data = await response.json();
-```
-
-## Response Format
-
-Successful search response:
-```json
-{
-  "query": "cement for foundation",
-  "results": [
     {
-      "id": "507f1f77bcf86cd799439011",
-      "title": "Portland Cement",
-      "description": "High-quality cement for construction...",
-      "price": 250.0,
-      "quantity": 500,
-      "category": "Cement",
-      "image": "https://example.com/image.jpg",
-      "similarity_score": 0.8532
-    }
+
+      "id": "507f...",# Admin - rebuild all embeddings
+
+      "title": "Portland Cement 50kg",POST /rebuild-cache
+
+      "description": "High-quality cement...",
+
+      "price": 250.0,# Webhooks - for MERN app integration
+
+      "category": "Cement",POST /webhooks/product-created
+
+      "similarity_score": 0.89POST /webhooks/product-updated
+
+    }```
+
   ],
-  "count": 1
-}
+
+  "count": 1**Example:**
+
+}```bash
+
+```curl "http://localhost:8000/search?query=cement%20bags&top_k=5"
+
 ```
 
-## Example Queries
+---
+
+**Response:**
+
+## 🔗 Integration with MERN App```json
+
+{
+
+Call webhooks when products are added/updated:  "query": "cement bags",
+
+  "results": [
+
+```javascript    {
+
+// After creating a product      "id": "507f...",
+
+const newProduct = await Product.create({...});      "title": "Portland Cement 50kg",
+
+      "description": "High-quality cement...",
+
+// Notify search API (optional - auto-indexed on restart if skipped)      "price": 250.0,
+
+await axios.post('http://your-api-url/webhooks/product-created', {      "category": "Cement",
+
+  product_id: newProduct._id.toString()      "similarity_score": 0.89
+
+});    }
+
+```  ],
+
+  "count": 1
+
+**Without webhooks:** New products are auto-indexed on next API restart.}
+
+```
+
+---
+
+## 🔗 Integration with MERN App
+
+## 💾 How It Works
+
+Your friend's app should call these webhooks when products change:
+
+1. **Embeddings stored in MongoDB** alongside product data
+
+2. **First startup:** Generates embeddings for all products (~1-2 min for 500 products)```javascript
+
+3. **Subsequent startups:** Loads embeddings from MongoDB (~2 seconds)// Node.js backend - when creating a product
+
+4. **Search:** Compares query embedding with stored embeddings using cosine similarityconst newProduct = await Product.create({...});
+
+
+
+### MongoDB Document Structure// Notify search API (optional but recommended)
+
+await axios.post('http://your-api.com/webhooks/product-created', {
+
+```javascript  product_id: newProduct._id.toString()
+
+{});
+
+  "_id": ObjectId("..."),
+
+  "title": "Portland Cement",// Now the product is immediately searchable!
+
+  "description": "...",```
+
+  "price": 250,
+
+  "category": "Cement",Without webhooks, new products are auto-indexed on API restart.
+
+  // Auto-generated by API:
+
+  "embedding": [0.123, -0.456, ...],  // 384 floats## Response Format
+
+  "embedding_model": "all-MiniLM-L6-v2"
+
+}Successful search response:
+
+``````json
+
+{
+
+---  "query": "cement for foundation",
+
+  "results": [
+
+## 🚀 Deployment    {
+
+      "id": "507f1f77bcf86cd799439011",
+
+### Option 1: Render (Recommended - Free)      "title": "Portland Cement",
+
+      "description": "High-quality cement for construction...",
+
+1. Create `requirements.txt`:      "price": 250.0,
+
+   ```bash      "quantity": 500,
+
+   pip freeze > requirements.txt      "category": "Cement",
+
+   ```      "image": "https://example.com/image.jpg",
+
+      "similarity_score": 0.8532
+
+2. Push to GitHub    }
+
+  ],
+
+3. Go to [render.com](https://render.com) → New Web Service  "count": 1
+
+}
+
+4. Configure:```
+
+   - Build: `pip install -r requirements.txt`
+
+   - Start: `uvicorn api:app --host 0.0.0.0 --port $PORT`## Example Queries
+
+   - Add environment variables (MONGODB_URI, etc.)
 
 Try these natural language queries:
-- "cement for foundation work"
+
+5. Deploy! Your API will be at: `https://your-app.onrender.com`- "cement for foundation work"
+
 - "steel rods for reinforcement"
-- "waterproofing material for roof"
+
+### Option 2: Railway- "waterproofing material for roof"
+
 - "paint for exterior walls"
-- "tiles for bathroom flooring"
-- "sand for concrete mixing"
-- "bricks for wall construction"
-- "adhesive for tile installation"
+
+1. Go to [railway.app](https://railway.app)- "tiles for bathroom flooring"
+
+2. Deploy from GitHub repo- "sand for concrete mixing"
+
+3. Add environment variables- "bricks for wall construction"
+
+4. Done!- "adhesive for tile installation"
+
 - "plywood for furniture making"
-- "metal pipes for plumbing"
 
-## Architecture
+### Option 3: Docker- "metal pipes for plumbing"
 
-### Components
 
-1. **api.py**: FastAPI application with REST endpoints
-2. **lib/semantic_search.py**: Core semantic search engine
-3. **MongoDB Atlas**: Construction materials database
-4. **cache/**: Cached embeddings for fast search
+
+```dockerfile## Architecture
+
+FROM python:3.11-slim
+
+WORKDIR /app### Components
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt1. **api.py**: FastAPI application with REST endpoints
+
+COPY . .2. **lib/semantic_search.py**: Core semantic search engine
+
+EXPOSE 80003. **MongoDB Atlas**: Construction materials database
+
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]4. **cache/**: Cached embeddings for fast search
+
+```
 
 ### How It Works
 
-1. On first startup, the API connects to MongoDB Atlas
-2. It fetches all construction materials from the database
-3. It generates embeddings for all materials using sentence-transformers
+```bash
+
+docker build -t material-search-api .1. On first startup, the API connects to MongoDB Atlas
+
+docker run -p 8000:8000 --env-file .env material-search-api2. It fetches all construction materials from the database
+
+```3. It generates embeddings for all materials using sentence-transformers
+
 4. Embeddings are cached to disk for fast subsequent startups
-5. Search queries are embedded and compared using cosine similarity
+
+---5. Search queries are embedded and compared using cosine similarity
+
 6. Top matching materials are returned with similarity scores and details
+
+## 🔧 Configuration
 
 ### Model
 
+### Environment Variables
+
 Uses `all-MiniLM-L6-v2` from sentence-transformers:
-- Fast and efficient
-- Good balance of speed and accuracy
-- 384-dimensional embeddings
-- Works well for semantic search
+
+```bash- Fast and efficient
+
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/db- Good balance of speed and accuracy
+
+MONGODB_DATABASE=product- 384-dimensional embeddings
+
+MONGODB_COLLECTION=products- Works well for semantic search
+
+```
 
 ## Development
 
+### MongoDB Atlas Setup
+
 ### Project Structure
 
-```
-materialmoversearch/
+1. Whitelist IP: `0.0.0.0/0` (for cloud deployment)
+
+2. Create database user with read permissions```
+
+3. Get connection stringmaterialmoversearch/
+
 ├── api.py                  # Main FastAPI application
-├── lib/
+
+---├── lib/
+
 │   └── semantic_search.py  # Search engine implementation
-├── .env                    # MongoDB connection credentials
+
+## ⚡ Performance├── .env                    # MongoDB connection credentials
+
 ├── cache/                  # Auto-generated embeddings cache
-├── main.py                 # Info script (run for instructions)
-├── pyproject.toml          # Dependencies
-├── README.md               # Full documentation
-└── QUICKSTART.md           # Quick start guide
-```
 
-### Updating Materials
+- **First startup:** 30-60 seconds (generates embeddings)├── main.py                 # Info script (run for instructions)
 
-Materials are stored in MongoDB Atlas. To update the search index after changing the database:
+- **Subsequent startups:** 2-3 seconds (loads from MongoDB)├── pyproject.toml          # Dependencies
 
-```bash
+- **Search latency:** <100ms├── README.md               # Full documentation
+
+- **Storage:** ~2.5KB per product (1.5KB for embedding)└── QUICKSTART.md           # Quick start guide
+
+- **Current:** 503 products = ~1.25MB in MongoDB```
+
+
+
+---### Updating Materials
+
+
+
+## 🔒 Security (Optional)Materials are stored in MongoDB Atlas. To update the search index after changing the database:
+
+
+
+Add API key authentication:```bash
+
 curl -X POST "http://localhost:8000/rebuild-cache"
-```
 
-This will fetch the latest materials from MongoDB and regenerate the embeddings.
+```python```
 
-### Configuration
+# In api.py
 
-You can customize the search engine by modifying `lib/semantic_search.py`:
-- Change the model: `model_name` parameter
-- Adjust cache location: `cache_dir` parameter
-- Modify search parameters: `top_k`, `min_score`
+API_KEY = os.getenv("API_KEY")This will fetch the latest materials from MongoDB and regenerate the embeddings.
 
-## Production Deployment
 
-### Using Docker (Recommended)
 
-Create a `Dockerfile`:
-```dockerfile
-FROM python:3.11-slim
+@app.get("/search")### Configuration
 
-WORKDIR /app
+async def search(x_api_key: str = Header(...)):
+
+    if x_api_key != API_KEY:You can customize the search engine by modifying `lib/semantic_search.py`:
+
+        raise HTTPException(401, "Invalid API key")- Change the model: `model_name` parameter
+
+    # ... rest of code- Adjust cache location: `cache_dir` parameter
+
+```- Modify search parameters: `top_k`, `min_score`
+
+
+
+---## Production Deployment
+
+
+
+## 📊 Tech Stack### Using Docker (Recommended)
+
+
+
+- **FastAPI** - Web frameworkCreate a `Dockerfile`:
+
+- **Sentence-Transformers** - AI embeddings (all-MiniLM-L6-v2)```dockerfile
+
+- **MongoDB Atlas** - Database + embedding storageFROM python:3.11-slim
+
+- **NumPy** - Vector similarity calculations
+
+- **Python 3.11+**WORKDIR /app
+
 COPY . .
+
+---
 
 RUN pip install -e .
 
+## 🆘 Troubleshooting
+
 EXPOSE 8000
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
-```
 
-Build and run:
-```bash
-docker build -t material-search-api .
-docker run -p 8000:8000 -e MONGODB_URI="your-connection-string" material-search-api
-```
+**New products not searchable?**CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
 
-### Using Production ASGI Server
+- Use webhooks, OR```
+
+- Restart API, OR
+
+- Call `/rebuild-cache`Build and run:
 
 ```bash
-# Install gunicorn
+
+**Slow first startup?**docker build -t material-search-api .
+
+- Normal! Generating embeddings for all productsdocker run -p 8000:8000 -e MONGODB_URI="your-connection-string" material-search-api
+
+- Subsequent startups are fast```
+
+
+
+**MongoDB connection failed?**### Using Production ASGI Server
+
+- Check `.env` credentials
+
+- Verify IP whitelist in MongoDB Atlas```bash
+
+- Test with MongoDB Compass# Install gunicorn
+
 pip install gunicorn
 
+---
+
 # Run with multiple workers
-gunicorn api:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+
+## 📝 Licensegunicorn api:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+
 ```
+
+MIT
 
 ### Environment Variables
 
+---
+
 Set these for production (create a `.env` file):
-```bash
+
+**Questions?** Check `/docs` endpoint for interactive API documentation.```bash
+
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database
 MONGODB_DATABASE=product
 MONGODB_COLLECTION=Material-Mover
