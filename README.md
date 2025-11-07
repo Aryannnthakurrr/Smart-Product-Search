@@ -14,22 +14,8 @@ A high-performance FastAPI microservice that provides **intelligent semantic sea
 - 💾 **Persistent Storage** - MongoDB with automatic embedding caching
 - 🔄 **Real-time Updates** - Webhook support for product creation/updates
 - 📊 **Interactive API Docs** - Built-in Swagger UI at `/docs`
-- 🎯 **Relevance Scoring** - Configurable similarity thresholds and result limits
-- 🔧 **Cache Management** - On-demand embedding regeneration
 
-## 📋 Table of Contents
-
-- [Quick Start](#-quick-start)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Usage Examples](#-usage-examples)
-- [API Reference](#-api-reference)
-- [Project Structure](#-project-structure)
-- [How It Works](#-how-it-works)
-- [Performance](#-performance)
-- [Tech Stack](#-tech-stack)
-
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 
@@ -45,19 +31,20 @@ git clone <repository-url>
 cd materialmoversearch
 ```
 
-2. **Create a virtual environment**
+2. **Install dependencies with uv**
 ```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
+# Install uv if you don't have it
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
 # Linux/Mac
-source .venv/bin/activate
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install project dependencies (uv auto-manages virtual environment)
+uv sync
 ```
 
-3. **Install dependencies**
-```bash
-pip install -r requirements.txt
-```
+> 💡 **Alternative with pip**: If you prefer using pip, run `python -m venv .venv`, activate it, then `pip install -r requirements.txt`
 
 ### Configuration
 
@@ -69,11 +56,13 @@ MONGODB_DATABASE=product
 MONGODB_COLLECTION=products
 ```
 
-> 💡 **Tip**: Replace `username`, `password`, and `cluster` with your MongoDB Atlas credentials.
-
 ### Run the Server
 
 ```bash
+# Using uv (recommended - auto-activates virtual environment)
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Or with standard uvicorn (if you activated .venv manually)
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
@@ -84,9 +73,7 @@ The API will be available at:
 
 ## 💡 Usage Examples
 
-### Example 1: Basic Search (GET Request)
-
-Search for cement products using a simple GET request:
+### Basic Search (GET)
 
 ```bash
 curl "http://localhost:8000/search?query=cement%20for%20foundation&top_k=3"
@@ -103,28 +90,15 @@ curl "http://localhost:8000/search?query=cement%20for%20foundation&top_k=3"
       "description": "High-quality cement ideal for foundation and structural work",
       "category": "Cement",
       "price": 450.00,
-      "quantity": 150,
       "brand": "UltraCem",
       "score": 0.8542
-    },
-    {
-      "_id": "507f1f77bcf86cd799439012",
-      "title": "Foundation Grade Concrete Mix",
-      "description": "Pre-mixed concrete perfect for foundation slabs",
-      "category": "Concrete",
-      "price": 380.00,
-      "quantity": 200,
-      "brand": "BuildPro",
-      "score": 0.7891
     }
   ],
-  "total": 2
+  "total": 1
 }
 ```
 
-### Example 2: Advanced Search (POST Request)
-
-Use POST for complex queries with custom parameters:
+### Advanced Search (POST)
 
 ```bash
 curl -X POST "http://localhost:8000/search" \
@@ -136,12 +110,11 @@ curl -X POST "http://localhost:8000/search" \
   }'
 ```
 
-### Example 3: Python Client
+### Python Client
 
 ```python
 import requests
 
-# Search for steel materials
 response = requests.get(
     "http://localhost:8000/search",
     params={
@@ -156,32 +129,7 @@ for item in results["results"]:
     print(f"{item['title']} - Score: {item['score']:.2%}")
 ```
 
-**Output:**
-```
-TMT Steel Bars 12mm - Score: 85.42%
-Reinforcement Steel Mesh - Score: 78.91%
-Galvanized Steel Rods - Score: 72.33%
-```
-
-### Example 4: JavaScript/TypeScript Client
-
-```typescript
-const searchMaterials = async (query: string) => {
-  const response = await fetch(
-    `http://localhost:8000/search?query=${encodeURIComponent(query)}&top_k=5`
-  );
-  const data = await response.json();
-  return data.results;
-};
-
-// Usage
-const results = await searchMaterials("paint for exterior walls");
-console.log(`Found ${results.length} materials`);
-```
-
-### Example 5: Health Check
-
-Monitor API status and loaded materials:
+### Health Check
 
 ```bash
 curl http://localhost:8000/health
@@ -197,35 +145,6 @@ curl http://localhost:8000/health
 ```
 
 ## 📚 API Reference
-
-### General Endpoints
-
-#### `GET /`
-Root endpoint with API information.
-
-**Response:**
-```json
-{
-  "service": "Construction Materials Semantic Search",
-  "version": "1.0.0",
-  "endpoints": {
-    "search": "/search",
-    "health": "/health",
-    "rebuild_cache": "/rebuild-cache",
-    "docs": "/docs"
-  }
-}
-```
-
-#### `GET /health`
-Health check endpoint.
-
-**Response Model:** `HealthResponse`
-- `status` (string): Service status
-- `materials_loaded` (int): Number of indexed materials
-- `model` (string): ML model name
-
----
 
 ### Search Endpoints
 
@@ -244,12 +163,9 @@ Semantic search with query parameters.
 - `steel rods for reinforcement`
 - `waterproofing material for roof`
 - `paint for exterior walls`
-- `tiles for bathroom flooring`
-
-**Response Model:** `SearchResponse`
 
 #### `POST /search`
-Semantic search with JSON body.
+Same as GET but with JSON body.
 
 **Request Body:**
 ```json
@@ -260,216 +176,115 @@ Semantic search with JSON body.
 }
 ```
 
-**Response:** Same as GET `/search`
-
----
-
 ### Admin Endpoints
 
+#### `GET /health`
+Health check with service statistics.
+
 #### `POST /rebuild-cache`
-Rebuild all embeddings from scratch. Useful after bulk data updates.
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "All embeddings rebuilt",
-  "materials_loaded": 1247
-}
-```
-
-> ⚠️ **Warning**: This operation may take several minutes for large datasets.
-
----
-
-### Webhook Endpoints
+Rebuild all embeddings from scratch (for bulk data updates).
 
 #### `POST /webhooks/product-created`
-Generate embedding for a newly created product.
+Generate embedding for newly created product.
 
-**Parameters:**
-- `product_id` (string, required): MongoDB ObjectId of the new product
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Embedding generated for product 507f1f77bcf86cd799439011",
-  "materials_loaded": 1248
-}
-```
+**Parameters:** `product_id` (MongoDB ObjectId)
 
 #### `POST /webhooks/product-updated`
-Regenerate embedding for an updated product.
+Update embedding for modified product.
 
-**Parameters:**
-- `product_id` (string, required): MongoDB ObjectId of the updated product
-
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Embedding updated for product 507f1f77bcf86cd799439011",
-  "materials_loaded": 1247
-}
-```
+**Parameters:** `product_id` (MongoDB ObjectId)
 
 ## 📁 Project Structure
 
 ```
 materialmoversearch/
 ├── app/
-│   ├── __init__.py
 │   ├── main.py                    # FastAPI application & routes
 │   ├── core/
-│   │   ├── __init__.py
 │   │   ├── config.py             # Settings & environment variables
 │   │   └── database.py           # MongoDB connection manager
 │   ├── models/
-│   │   ├── __init__.py
 │   │   └── schemas.py            # Pydantic models for validation
 │   └── services/
-│       ├── __init__.py
 │       └── search.py             # Semantic search engine logic
-├── .env                          # Environment configuration (create this)
-├── .gitignore
+├── .env                          # Environment configuration
 ├── requirements.txt              # Python dependencies
-├── pyproject.toml               # Project metadata
 └── README.md                    # This file
 ```
 
 ### Core Components
 
-#### `app/main.py`
-- FastAPI application setup
-- Route definitions
-- Middleware configuration (CORS)
-- Lifecycle management (startup/shutdown)
+**`app/main.py`** - FastAPI application setup, routes, CORS middleware, lifecycle management
 
-#### `app/core/config.py`
-- Environment variable loading
-- Application settings
-- Model configuration
-- MongoDB connection parameters
+**`app/core/config.py`** - Environment variables, application settings, model configuration
 
-#### `app/core/database.py`
-- MongoDB client management
-- CRUD operations for materials
-- Embedding persistence
-- Connection pooling
+**`app/core/database.py`** - MongoDB client, CRUD operations, embedding persistence
 
-#### `app/models/schemas.py`
-- Pydantic models for request/response validation
-- Type definitions for Material, SearchRequest, SearchResponse
-- API documentation schemas
+**`app/models/schemas.py`** - Pydantic models for request/response validation
 
-#### `app/services/search.py`
-- Sentence-BERT model loading
-- Embedding generation and caching
-- Cosine similarity search
-- Vector operations with NumPy
-- Real-time index updates
+**`app/services/search.py`** - Sentence-BERT model, embedding generation, cosine similarity search
 
 ## 🔬 How It Works
 
-### 1. **Model Initialization**
-On startup, the API loads the `all-MiniLM-L6-v2` Sentence-BERT model (133MB), which converts text into 384-dimensional vectors.
+### 1. Model Initialization
+On startup, loads the `all-MiniLM-L6-v2` Sentence-BERT model (133MB) that converts text into 384-dimensional vectors.
 
-### 2. **Embedding Generation**
-For each material, the system creates a searchable text string:
+### 2. Embedding Generation
+For each material:
 ```python
 text = f"{title} {category} {description}"
 embedding = model.encode(text)  # Returns 384-dim vector
 ```
 
-### 3. **Vector Storage**
-Embeddings are stored in MongoDB alongside material data and cached in memory for fast retrieval:
+### 3. Vector Storage
+Embeddings stored in MongoDB alongside material data:
 ```json
 {
   "_id": "507f1f77bcf86cd799439011",
   "title": "Portland Cement",
   "embedding": [0.123, -0.456, 0.789, ...],  // 384 floats
-  "embedding_generated_at": "2025-11-07T10:30:00Z",
   "embedding_model": "all-MiniLM-L6-v2"
 }
 ```
 
-### 4. **Search Process**
-When a query arrives:
-1. **Encode** the query into a 384-dimensional vector
-2. **Calculate** cosine similarity with all material embeddings
-3. **Rank** results by similarity score
-4. **Filter** by minimum score threshold
-5. **Return** top-k most relevant materials
+### 4. Search Process
+1. Encode query into 384-dimensional vector
+2. Calculate cosine similarity with all material embeddings
+3. Rank results by similarity score
+4. Filter by minimum score threshold
+5. Return top-k most relevant materials
 
-### 5. **Cosine Similarity**
+### 5. Cosine Similarity
 Measures semantic similarity between vectors:
 ```
 similarity = (query · material) / (||query|| × ||material||)
 ```
 Result range: 0.0 (unrelated) to 1.0 (identical meaning)
 
-### Example Flow Diagram
-
-```
-User Query: "cement for foundation"
-        ↓
-[Encode Query] → [0.12, -0.45, 0.78, ...]
-        ↓
-[Compare with all embeddings]
-        ↓
-Material 1: 0.8542 ✅
-Material 2: 0.7891 ✅
-Material 3: 0.2341 ❌ (below threshold)
-        ↓
-[Return top results sorted by score]
-```
-
 ## ⚡ Performance
 
-### Benchmarks
-
-| Metric | Value | Notes |
-|--------|-------|-------|
-| **Cold Start** | 5-10 seconds | Model loading + DB connection |
-| **Warm Start** | <1 second | Cached embeddings ready |
-| **Search Latency** | 10-20ms | For 1,000 materials |
-| **Throughput** | 50-100 req/s | Single instance |
-| **Memory Usage** | ~500MB | Model + 1,000 embeddings |
-| **Embedding Generation** | 50-100ms | Per material |
-
-### Scaling Considerations
-
-- **Memory**: ~0.4MB per 1,000 materials (for embeddings)
-- **Database**: MongoDB Atlas free tier supports up to 512MB
-- **Compute**: CPU-bound; GPU acceleration not required for inference
-- **Horizontal Scaling**: Stateless design allows multiple instances behind load balancer
+| Metric | Value |
+|--------|-------|
+| **Cold Start** | 5-10 seconds |
+| **Search Latency** | 10-20ms |
+| **Throughput** | 50-100 req/s |
+| **Memory Usage** | ~500MB |
 
 ### Optimization Tips
 
-1. **Use min_score filtering** to reduce response size
-2. **Limit top_k** to reasonable values (5-10)
-3. **Enable MongoDB indexes** on frequently queried fields
-4. **Consider Redis** for embedding cache in production
-5. **Use async clients** for concurrent requests
+1. Use `min_score` filtering to reduce response size
+2. Limit `top_k` to reasonable values (5-10)
+3. Enable MongoDB indexes on frequently queried fields
+4. Consider Redis for embedding cache in production
+5. Use async clients for concurrent requests
 
 ## 🛠️ Tech Stack
 
-### Core Framework
 - **[FastAPI](https://fastapi.tiangolo.com/) 0.115+** - Modern async web framework
-- **[Uvicorn](https://www.uvicorn.org/)** - ASGI server with async support
-
-### Machine Learning
 - **[Sentence-Transformers](https://www.sbert.net/) 5.1+** - BERT-based semantic embeddings
-- **[NumPy](https://numpy.org/) 2.3+** - Efficient vector operations
-
-### Database
-- **[PyMongo](https://pymongo.readthedocs.io/) 4.15+** - MongoDB driver
 - **[MongoDB Atlas](https://www.mongodb.com/cloud/atlas)** - Cloud database platform
-
-### Utilities
-- **[Python-dotenv](https://pypi.org/project/python-dotenv/)** - Environment variable management
-- **[Pydantic](https://docs.pydantic.dev/)** - Data validation (via FastAPI)
+- **[NumPy](https://numpy.org/) 2.3+** - Efficient vector operations
+- **[Uvicorn](https://www.uvicorn.org/)** - ASGI server
 
 ### Model Details
 - **Name**: `all-MiniLM-L6-v2`
@@ -477,10 +292,6 @@ Material 3: 0.2341 ❌ (below threshold)
 - **Dimensions**: 384
 - **Performance**: 14.5x faster than BERT-base
 - **Quality**: 96.3% of BERT-large performance
-- MongoDB
-- NumPy 2.3+
-- Uvicorn 0.32+
-- PyMongo 4.15+
 
 ## License
 
