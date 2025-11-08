@@ -5,3 +5,4 @@ sentence-transformers>=5.1.2
 pymongo>=4.15.0
 numpy>=2.3.4
 python-dotenv>=1.1.0
+nltk>=3.8.1

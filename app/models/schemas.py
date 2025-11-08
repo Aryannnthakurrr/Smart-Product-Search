@@ -13,7 +13,12 @@ class Material(BaseModel):
     quantity: Optional[int] = 0
     brand: Optional[str] = ""
     image: Optional[str] = ""
+    phone_number: Optional[str] = ""
+    address: Optional[str] = ""
     score: Optional[float] = None
+    semantic_score: Optional[float] = None
+    keyword_score: Optional[float] = None
+    combined_score: Optional[float] = None
     
     class Config:
         populate_by_name = True
@@ -24,6 +29,15 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Search query text")
     top_k: int = Field(5, ge=1, le=50, description="Number of results to return")
     min_score: float = Field(0.3, ge=0.0, le=1.0, description="Minimum similarity score")
+
+
+class HybridSearchRequest(BaseModel):
+    """Hybrid search request payload"""
+    query: str = Field(..., min_length=1, description="Search query text")
+    top_k: int = Field(5, ge=1, le=50, description="Number of results to return")
+    min_score: float = Field(0.3, ge=0.0, le=1.0, description="Minimum combined score")
+    semantic_weight: float = Field(0.6, ge=0.0, le=1.0, description="Weight for semantic search (0-1)")
+    keyword_weight: float = Field(0.4, ge=0.0, le=1.0, description="Weight for keyword search (0-1)")
 
 
 class SearchResponse(BaseModel):

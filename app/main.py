@@ -6,12 +6,12 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.models.schemas import Material, SearchRequest, SearchResponse, HealthResponse
-from app.services.search import SemanticSearchEngine
+from app.models.schemas import Material, SearchRequest, SearchResponse, HealthResponse, HybridSearchRequest
+from app.services.hybrid_search import HybridSearchEngine
 
 
 # Global search engine instance
-search_engine: Optional[SemanticSearchEngine] = None
+search_engine: Optional[HybridSearchEngine] = None
 
 
 @asynccontextmanager
@@ -19,8 +19,8 @@ async def lifespan(app: FastAPI):
     """Manage application lifecycle"""
     global search_engine
     
-    print("Initializing semantic search engine...")
-    search_engine = SemanticSearchEngine()
+    print("Initializing hybrid search engine...")
+    search_engine = HybridSearchEngine()
     search_engine.initialize()
     print("Search engine ready!")
     
@@ -73,7 +73,7 @@ async def health_check():
     stats = search_engine.get_stats()
     return {
         "status": "healthy",
-        "materials_loaded": stats["materials_loaded"],
+        "materials_loaded": stats["semantic_materials"],
         "model": stats["model"]
     }
 
@@ -82,10 +82,16 @@ async def health_check():
 async def search_get(
     query: str = Query(..., description="Natural language search query", min_length=1),
     top_k: int = Query(5, description="Number of results to return", ge=1, le=50),
-    min_score: float = Query(0.3, description="Minimum similarity score", ge=0.0, le=1.0)
+    min_score: float = Query(0.3, description="Minimum combined score", ge=0.0, le=1.0),
+    semantic_weight: float = Query(0.6, description="Weight for semantic search", ge=0.0, le=1.0),
+    keyword_weight: float = Query(0.4, description="Weight for keyword search", ge=0.0, le=1.0)
 ):
     """
-    Search for construction materials using semantic similarity
+    Hybrid search for construction materials using semantic + keyword matching
+    
+    Combines:
+    - Semantic search (BERT embeddings + cosine similarity)
+    - Keyword search (BM25 ranking)
     
     Example queries:
     - cement for foundation work
@@ -98,7 +104,7 @@ async def search_get(
         raise HTTPException(status_code=503, detail="Search engine not initialized")
     
     try:
-        results = search_engine.search(query, top_k, min_score)
+        results = search_engine.search(query, top_k, min_score, semantic_weight, keyword_weight)
         return {
             "query": query,
             "results": results,
@@ -109,13 +115,19 @@ async def search_get(
 
 
 @app.post("/search", response_model=SearchResponse, tags=["Search"])
-async def search_post(request: SearchRequest):
-    """Search for construction materials using JSON request body"""
+async def search_post(request: HybridSearchRequest):
+    """Hybrid search for construction materials using JSON request body"""
     if not search_engine:
         raise HTTPException(status_code=503, detail="Search engine not initialized")
     
     try:
-        results = search_engine.search(request.query, request.top_k, request.min_score)
+        results = search_engine.search(
+            request.query, 
+            request.top_k, 
+            request.min_score,
+            request.semantic_weight,
+            request.keyword_weight
+        )
         return {
             "query": request.query,
             "results": results,
@@ -127,18 +139,23 @@ async def search_post(request: SearchRequest):
 
 @app.post("/rebuild-cache", tags=["Admin"])
 async def rebuild_cache():
-    """Rebuild all embeddings from scratch"""
+    """Rebuild semantic embeddings and BM25 keyword index from scratch"""
     if not search_engine:
         raise HTTPException(status_code=503, detail="Search engine not initialized")
     
     try:
-        success = search_engine.rebuild_cache()
-        if success:
+        # Rebuild semantic embeddings
+        semantic_success = search_engine.semantic_engine.rebuild_cache()
+        # Rebuild keyword index
+        keyword_success = search_engine.rebuild_keyword_cache()
+        
+        if semantic_success and keyword_success:
             stats = search_engine.get_stats()
             return {
                 "status": "success",
-                "message": "All embeddings rebuilt",
-                "materials_loaded": stats["materials_loaded"]
+                "message": "All embeddings and keyword index rebuilt",
+                "semantic_materials": stats["semantic_materials"],
+                "keyword_materials": stats["keyword_materials"]
             }
         else:
             raise HTTPException(status_code=500, detail="Cache rebuild failed")
