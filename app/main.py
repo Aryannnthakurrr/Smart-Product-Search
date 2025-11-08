@@ -39,14 +39,25 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# ===== CORS CONFIGURATION FOR WiFi TESTING (Lines 36-48) =====
+# ADDED: Enable Cross-Origin Resource Sharing for your friend's MERN app
+# Your friend's React frontend (192.168.0.x:3000) can now make requests to your API (192.168.0.x:8000)
+# This allows requests from any device on the same WiFi network
+# 
+# Details:
+# - allow_origins: Allows requests from friend's React dev server on port 3000
+# - allow_credentials: Allows cookies to be sent with requests
+# - allow_methods: ["*"] Allows GET, POST, PUT, DELETE, etc.
+# - allow_headers: ["*"] Allows any headers in the request
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.CORS_ORIGINS,  # See app/core/config.py (Lines 25-32) for allowed origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ===== END CORS CONFIGURATION =====
+
 
 
 @app.get("/", tags=["General"])

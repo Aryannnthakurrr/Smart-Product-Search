@@ -22,8 +22,15 @@ class Settings:
     API_VERSION: str = "1.0.0"
     API_DESCRIPTION: str = "Semantic search microservice for construction materials catalog"
     
-    # CORS
-    CORS_ORIGINS: list = ["*"]
+    # CORS - Updated for WiFi testing between devices (Line 25-26)
+    # Added: http://192.168.0.* pattern for local WiFi testing
+    # Your friend's React app (port 3000) can now connect to your API (port 8000)
+    CORS_ORIGINS: list = [
+        "http://localhost:3000",           # Friend's local dev server
+        "http://127.0.0.1:3000",           # Alternative localhost
+        "http://192.168.0.*",              # ANY device on 192.168.0.x WiFi network
+        "*"                                # Allow all origins (remove in production)
+    ]
     
     def validate(self) -> None:
         """Validate required settings"""
