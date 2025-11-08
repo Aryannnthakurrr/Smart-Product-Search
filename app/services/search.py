@@ -153,6 +153,7 @@ class SemanticSearchEngine:
     def add_material(self, product_id: str) -> bool:
         """
         Generate and store embedding for a newly added material
+        ALSO adds it to in-memory cache for immediate searchability
         
         Args:
             product_id: MongoDB ObjectId as string
@@ -166,8 +167,14 @@ class SemanticSearchEngine:
                 print(f"❌ Material {product_id} not found")
                 return False
             
+            # Check if embedding already exists in database
             if 'embedding' in material and material['embedding']:
-                print(f"⚠️  Material {product_id} already has an embedding")
+                print(f"⚠️  Material {product_id} already has an embedding in database")
+                # Still add to in-memory cache if not present
+                if not any(m['_id'] == product_id for m in self.materials):
+                    self.materials.append(material)
+                    self.embeddings = np.vstack([self.embeddings, np.array(material['embedding'])])
+                    print(f"✅ Added existing material to in-memory cache: {material.get('title', 'Unknown')}")
                 return True
             
             # Generate embedding
@@ -179,19 +186,30 @@ class SemanticSearchEngine:
             
             # Add to in-memory cache
             material['embedding'] = embedding
-            self.materials.append(material)
-            self.embeddings = np.vstack([self.embeddings, np.array(embedding)])
+            material['embedding_generated_at'] = datetime.utcnow()
+            material['embedding_model'] = self.model_name
             
-            print(f"✅ Added material: {material.get('title', 'Unknown')}")
+            self.materials.append(material)
+            
+            # Handle empty embeddings array
+            if len(self.embeddings) == 0:
+                self.embeddings = np.array([embedding])
+            else:
+                self.embeddings = np.vstack([self.embeddings, np.array(embedding)])
+            
+            print(f"✅ Added material to search index: {material.get('title', 'Unknown')}")
             return True
             
         except Exception as e:
             print(f"❌ Error adding material: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def update_material(self, product_id: str) -> bool:
         """
         Regenerate embedding for an updated material
+        Updates both database and in-memory cache
         
         Args:
             product_id: MongoDB ObjectId as string
@@ -200,17 +218,51 @@ class SemanticSearchEngine:
             Success status
         """
         try:
-            # Remove from cache
-            self.materials = [m for m in self.materials if m['_id'] != product_id]
+            # Fetch updated material from database
+            material = self.db_manager.find_by_id(product_id)
+            if not material:
+                print(f"❌ Material {product_id} not found")
+                return False
             
-            # Reload all materials
-            self._load_materials_with_embeddings()
+            # Generate new embedding with updated content
+            text = f"{material.get('title', '')} {material.get('category', '')} {material.get('description', '')}"
+            embedding = self.model.encode(text, convert_to_numpy=True).tolist()
             
-            print(f"✅ Updated material embedding")
+            # Save to database
+            self.db_manager.update_embedding(product_id, embedding)
+            material['embedding'] = embedding
+            material['embedding_generated_at'] = datetime.utcnow()
+            material['embedding_model'] = self.model_name
+            
+            # Update in-memory cache
+            # Find and remove old version
+            material_index = None
+            for idx, m in enumerate(self.materials):
+                if m['_id'] == product_id:
+                    material_index = idx
+                    break
+            
+            if material_index is not None:
+                # Replace in materials list
+                self.materials[material_index] = material
+                # Replace in embeddings array
+                self.embeddings[material_index] = np.array(embedding)
+                print(f"✅ Updated material in search index: {material.get('title', 'Unknown')}")
+            else:
+                # Material not in cache, add it
+                self.materials.append(material)
+                if len(self.embeddings) == 0:
+                    self.embeddings = np.array([embedding])
+                else:
+                    self.embeddings = np.vstack([self.embeddings, np.array(embedding)])
+                print(f"✅ Added updated material to search index: {material.get('title', 'Unknown')}")
+            
             return True
             
         except Exception as e:
             print(f"❌ Error updating material: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def rebuild_cache(self) -> bool:

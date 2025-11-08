@@ -4,9 +4,13 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 from app.core.config import settings
-from app.models.schemas import Material, SearchRequest, SearchResponse, HealthResponse, HybridSearchRequest
+from app.models.schemas import (
+    Material, SearchRequest, SearchResponse, HealthResponse, HybridSearchRequest,
+    WebhookProductAdded, WebhookProductUpdated  # NEW: Webhook schemas
+)
 from app.services.hybrid_search import HybridSearchEngine
 
 
@@ -216,35 +220,197 @@ async def rebuild_cache():
         raise HTTPException(status_code=500, detail=f"Rebuild failed: {str(e)}")
 
 
-@app.post("/webhooks/product-created", tags=["Webhooks"])
-async def product_created(product_id: str):
-    """Generate embedding for newly created product"""
-    if not search_engine:
-        raise HTTPException(status_code=503, detail="Search engine not initialized")
+# ===== WEBHOOK ENDPOINTS (Lines 220-330) =====
+# These endpoints receive automatic notifications from your friend's service
+# when products are added or updated in their database
+
+@app.post("/webhook/product-added", tags=["Webhooks"], summary="Product Added Webhook")
+async def webhook_product_added(data: WebhookProductAdded):
+    """
+    ✨ WEBHOOK: Friend's service notifies you when a NEW product is added
     
+    SIMPLIFIED: Only send product_id - we fetch everything else from database!
+    
+    WHAT IT DOES:
+    1. Friend adds a product to their database
+    2. Friend's service automatically sends: {"product_id": "690f371b..."}
+    3. Your system automatically:
+       - Fetches product from database
+       - Generates embedding from product title
+       - Indexes the product
+    4. Product is now searchable via /search and /recommend endpoints
+    
+    FRIEND'S CODE:
+    ```javascript
+    await axios.post('https://your-ngrok-url/webhook/product-added', {
+      product_id: product._id.toString()  // That's it!
+    });
+    ```
+    """
     try:
-        success = search_engine.add_material(product_id)
-        if success:
-            stats = search_engine.get_stats()
-            return {
-                "status": "success",
-                "message": f"Embedding generated for product {product_id}",
-                "materials_loaded": stats["materials_loaded"]
-            }
-        else:
-            raise HTTPException(status_code=404, detail=f"Product {product_id} not found")
+        from bson import ObjectId
+        
+        if not search_engine:
+            raise HTTPException(status_code=503, detail="Search engine not initialized")
+        
+        # Validate ObjectId format
+        try:
+            object_id = ObjectId(data.product_id)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid product_id format: {str(e)}")
+        
+        # Fetch product from database using db_manager
+        try:
+            product = search_engine.semantic_engine.db_manager.collection.find_one({"_id": object_id})
+            if not product:
+                raise HTTPException(status_code=404, detail=f"Product {data.product_id} not found in database")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database query failed: {str(e)}")
+        
+        # Check if already has embedding
+        if "embedding" in product:
+            raise HTTPException(status_code=400, detail=f"Product {data.product_id} already indexed")
+        
+        # Get title from database
+        title = product.get("title", "")
+        if not title:
+            raise HTTPException(status_code=400, detail=f"Product {data.product_id} has no title")
+        
+        # CRITICAL FIX: Use add_material() to update both database AND in-memory cache
+        try:
+            success = search_engine.semantic_engine.add_material(data.product_id)
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to add material to semantic search")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Semantic search update failed: {str(e)}")
+        
+        # Update BM25 keyword index (this now also updates docmap)
+        try:
+            search_engine.keyword_engine.add_document(
+                doc_id=data.product_id,
+                text=title
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"BM25 index update failed: {str(e)}")
+        
+        # Verify the product is now searchable
+        stats = search_engine.get_stats()
+        
+        print(f"✅ Webhook SUCCESS: Product '{title}' (ID: {data.product_id}) indexed and added to in-memory caches")
+        
+        return {
+            "status": "success",
+            "product_id": data.product_id,
+            "title": title,
+            "message": "Product indexed and immediately searchable",
+            "semantic_materials": stats["semantic_materials"],
+            "keyword_materials": stats["keyword_materials"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to add material: {str(e)}")
+        print(f"❌ Webhook ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Webhook failed: {str(e)}")
 
 
-@app.post("/webhooks/product-updated", tags=["Webhooks"])
-async def product_updated(product_id: str):
-    """Update embedding for modified product"""
-    if not search_engine:
-        raise HTTPException(status_code=503, detail="Search engine not initialized")
+@app.post("/webhook/product-updated", tags=["Webhooks"], summary="Product Updated Webhook")
+async def webhook_product_updated(data: WebhookProductUpdated):
+    """
+    🔄 WEBHOOK: Friend's service notifies you when a product is UPDATED
     
+    SIMPLIFIED: Only send product_id - we fetch everything else from database!
+    
+    WHAT IT DOES:
+    1. Friend updates a product in their database
+    2. Friend's service sends: {"product_id": "690f371b..."}
+    3. Your system automatically:
+       - Fetches product from database (gets updated title)
+       - Regenerates embedding based on new title
+       - Re-indexes the product
+    4. Updated product reflects in search results immediately
+    
+    FRIEND'S CODE:
+    ```javascript
+    await axios.post('https://your-ngrok-url/webhook/product-updated', {
+      product_id: product._id.toString()  // That's it!
+    });
+    ```
+    """
     try:
-        success = search_engine.update_material(product_id)
+        from bson import ObjectId
+        
+        if not search_engine:
+            raise HTTPException(status_code=503, detail="Search engine not initialized")
+        
+        # Validate ObjectId format
+        try:
+            object_id = ObjectId(data.product_id)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Invalid product_id format: {str(e)}")
+        
+        # Fetch product from database using db_manager
+        try:
+            product = search_engine.semantic_engine.db_manager.collection.find_one({"_id": object_id})
+            if not product:
+                raise HTTPException(status_code=404, detail=f"Product {data.product_id} not found in database")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Database query failed: {str(e)}")
+        
+        # Check if product is indexed
+        if "embedding" not in product:
+            raise HTTPException(status_code=400, detail=f"Product {data.product_id} not indexed yet. Call /webhook/product-added first.")
+        
+        # Get title from database
+        title = product.get("title", "")
+        if not title:
+            raise HTTPException(status_code=400, detail=f"Product {data.product_id} has no title")
+        
+        # CRITICAL FIX: Use update_material() to update both database AND in-memory cache
+        try:
+            success = search_engine.semantic_engine.update_material(data.product_id)
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to update material in semantic search")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Semantic search update failed: {str(e)}")
+        
+        # Update BM25 index with new title (this now also updates docmap)
+        try:
+            search_engine.keyword_engine.update_document(
+                doc_id=data.product_id,
+                text=title
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"BM25 index update failed: {str(e)}")
+        
+        # Verify the product is searchable
+        stats = search_engine.get_stats()
+        
+        print(f"✅ Webhook SUCCESS: Product '{title}' (ID: {data.product_id}) updated in both search engines")
+        
+        return {
+            "status": "success",
+            "product_id": data.product_id,
+            "title": title,
+            "message": "Product updated and immediately searchable",
+            "semantic_materials": stats["semantic_materials"],
+            "keyword_materials": stats["keyword_materials"],
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Webhook ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Webhook failed: {str(e)}")
+
+# ===== END WEBHOOK ENDPOINTS =====
+
         if success:
             stats = search_engine.get_stats()
             return {

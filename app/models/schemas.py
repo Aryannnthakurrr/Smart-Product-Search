@@ -40,6 +40,35 @@ class HybridSearchRequest(BaseModel):
     keyword_weight: float = Field(0.4, ge=0.0, le=1.0, description="Weight for keyword search (0-1)")
 
 
+# ===== WEBHOOK SCHEMAS (Lines 44-65) =====
+# SIMPLIFIED: Only need product_id - API fetches all data from database!
+
+class WebhookProductAdded(BaseModel):
+    """Schema for product-added webhook from friend's service"""
+    product_id: str = Field(..., description="MongoDB ObjectId of new product")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "product_id": "690f371b09bfc4dc74bea545"
+            }
+        }
+
+
+class WebhookProductUpdated(BaseModel):
+    """Schema for product-updated webhook from friend's service"""
+    product_id: str = Field(..., description="MongoDB ObjectId of updated product")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "product_id": "690f371b09bfc4dc74bea545"
+            }
+        }
+
+
+# ===== END WEBHOOK SCHEMAS =====
+
 class SearchResponse(BaseModel):
     """Search response payload"""
     query: str

@@ -66,15 +66,34 @@ class KeywordSearchEngine:
     def initialize(self) -> None:
         """Initialize keyword search - build or load index"""
         try:
+            # Try loading from MongoDB first (most up-to-date)
+            self.db_manager.connect()
+            if self._load_from_mongodb():
+                print(f"✅ Loaded BM25 index from MongoDB with {len(self.docmap)} materials")
+                return
+            
+            # Fallback to loading from cache files
             self.load()
-            print(f"✅ Loaded BM25 index with {len(self.docmap)} materials")
+            print(f"✅ Loaded BM25 index from cache files with {len(self.docmap)} materials")
         except FileNotFoundError:
+            # Build from scratch if nothing exists
             print("🔄 Building BM25 index for the first time...")
             self.db_manager.connect()
             self.build()
             self.save()
-            self.db_manager.disconnect()
+            self._save_to_mongodb()
             print(f"✅ Built and saved BM25 index with {len(self.docmap)} materials")
+        except Exception as e:
+            print(f"⚠️  Error during initialization: {e}")
+            # Continue anyway - at least try to build from database
+            try:
+                self.db_manager.connect()
+                self.build()
+                self.save()
+                self._save_to_mongodb()
+                print(f"✅ Built BM25 index from database with {len(self.docmap)} materials")
+            except Exception as e2:
+                print(f"❌ Failed to build BM25 index: {e2}")
     
     def build(self) -> None:
         """Build inverted index from MongoDB materials"""
@@ -144,6 +163,104 @@ class KeywordSearchEngine:
         for token in tokens:
             self.term_frequencies[doc_id][token] += 1
     
+    def add_document(self, doc_id: str, text: str) -> None:
+        """
+        PUBLIC METHOD: Add a new document to BM25 index
+        Called when friend's service adds a new product via webhook
+        
+        Args:
+            doc_id: Document ID (as string)
+            text: Text to index (usually product title)
+        """
+        try:
+            # CRITICAL FIX: Fetch the actual material document from MongoDB
+            # We need to populate docmap so search can return results
+            if self.db_manager.collection is None:
+                self.db_manager.connect()
+            
+            from bson import ObjectId
+            material = self.db_manager.collection.find_one({"_id": ObjectId(doc_id)})
+            
+            if not material:
+                raise ValueError(f"Material {doc_id} not found in database")
+            
+            # Convert ObjectId to string for consistency
+            material['_id'] = str(material['_id'])
+            
+            # Add to docmap
+            self.docmap[doc_id] = material
+            
+            # Add to in-memory index
+            self._add_document(doc_id, text)
+            
+            # Save updated index to disk (cache)
+            self.save()
+            
+            # Also save to MongoDB for persistence
+            self._save_to_mongodb()
+            
+            print(f"✅ BM25: Added document {doc_id} to index and docmap")
+        except Exception as e:
+            print(f"❌ BM25: Error adding document: {e}")
+            raise
+    
+    def update_document(self, doc_id: str, text: str) -> None:
+        """
+        PUBLIC METHOD: Update an existing document in BM25 index
+        Called when friend's service updates a product via webhook
+        
+        Args:
+            doc_id: Document ID (as string)
+            text: Updated text to index (usually updated product title)
+        """
+        try:
+            # CRITICAL FIX: Fetch the updated material document from MongoDB
+            if self.db_manager.collection is None:
+                self.db_manager.connect()
+            
+            from bson import ObjectId
+            material = self.db_manager.collection.find_one({"_id": ObjectId(doc_id)})
+            
+            if not material:
+                raise ValueError(f"Material {doc_id} not found in database")
+            
+            # Convert ObjectId to string for consistency
+            material['_id'] = str(material['_id'])
+            
+            # Update docmap with fresh data
+            self.docmap[doc_id] = material
+            
+            # Remove old document from index
+            self._remove_document(doc_id)
+            
+            # Add updated document
+            self._add_document(doc_id, text)
+            
+            # Save updated index to disk (cache)
+            self.save()
+            
+            # Also save to MongoDB for persistence
+            self._save_to_mongodb()
+            
+            print(f"✅ BM25: Updated document {doc_id} in index and docmap")
+        except Exception as e:
+            print(f"❌ BM25: Error updating document: {e}")
+            raise
+    
+    def _remove_document(self, doc_id: str) -> None:
+        """Remove a document from the inverted index"""
+        # Remove from inverted index
+        for token in list(self.index.keys()):
+            if doc_id in self.index[token]:
+                self.index[token].discard(doc_id)
+                # Remove term if no documents contain it
+                if not self.index[token]:
+                    del self.index[token]
+        
+        # Remove from term frequencies and doc lengths
+        self.term_frequencies.pop(doc_id, None)
+        self.doc_lengths.pop(doc_id, None)
+    
     def get_bm25_idf(self, term: str) -> float:
         """Calculate BM25 IDF for a term"""
         tokens = tokenize_text(term)
@@ -184,6 +301,74 @@ class KeywordSearchEngine:
         if not self.doc_lengths:
             return 0.0
         return sum(self.doc_lengths.values()) / len(self.doc_lengths)
+    
+    def _save_to_mongodb(self) -> None:
+        """
+        Save BM25 index data to MongoDB collection
+        Creates/updates a special "bm25_index" document for persistence
+        """
+        try:
+            if self.db_manager.collection is None:
+                self.db_manager.connect()
+            
+            # Prepare index data for MongoDB
+            index_data = {
+                "_id": "bm25_index",  # Special ID for the index document
+                "inverted_index": {k: list(v) for k, v in self.index.items()},
+                "term_frequencies": {
+                    doc_id: dict(freq) for doc_id, freq in self.term_frequencies.items()
+                },
+                "doc_lengths": self.doc_lengths,
+                "last_updated": __import__('datetime').datetime.utcnow()
+            }
+            
+            # Upsert into MongoDB (create or update)
+            self.db_manager.collection.update_one(
+                {"_id": "bm25_index"},
+                {"$set": index_data},
+                upsert=True
+            )
+            
+            print("✅ BM25 index saved to MongoDB")
+        except Exception as e:
+            print(f"⚠️  Warning: Could not save BM25 index to MongoDB: {e}")
+            # Don't raise - BM25 should still work with cache files
+    
+    def _load_from_mongodb(self) -> bool:
+        """
+        Load BM25 index data from MongoDB
+        Returns True if successfully loaded, False otherwise
+        """
+        try:
+            if self.db_manager.collection is None:
+                self.db_manager.connect()
+            
+            index_doc = self.db_manager.collection.find_one({"_id": "bm25_index"})
+            
+            if not index_doc:
+                return False
+            
+            # Restore index data
+            self.index = defaultdict(set)
+            for term, doc_ids in index_doc.get("inverted_index", {}).items():
+                self.index[term] = set(doc_ids)
+            
+            self.term_frequencies = {}
+            for doc_id, freq_dict in index_doc.get("term_frequencies", {}).items():
+                self.term_frequencies[doc_id] = Counter(freq_dict)
+            
+            self.doc_lengths = index_doc.get("doc_lengths", {})
+            
+            # CRITICAL FIX: Load actual material documents into docmap
+            # The index structures are useless without the actual documents!
+            all_materials = self.db_manager.get_all_materials()
+            self.docmap = {material["_id"]: material for material in all_materials}
+            
+            print(f"✅ Loaded BM25 index from MongoDB with {len(self.docmap)} materials")
+            return True
+        except Exception as e:
+            print(f"⚠️  Warning: Could not load BM25 index from MongoDB: {e}")
+            return False
     
     def bm25_score(self, doc_id: str, term: str) -> float:
         """Calculate BM25 score for a term in a document"""

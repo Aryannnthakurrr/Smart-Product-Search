@@ -26,12 +26,13 @@ class DatabaseManager:
             self.client.close()
     
     def get_all_materials(self) -> List[Dict]:
-        """Retrieve all materials from database"""
+        """Retrieve all materials from database (excluding special index documents)"""
         if self.collection is None:
             raise RuntimeError("Database not connected")
         
         materials = []
-        for doc in self.collection.find():
+        # Exclude the special BM25 index document
+        for doc in self.collection.find({"_id": {"$ne": "bm25_index"}}):
             doc['_id'] = str(doc['_id'])
             materials.append(doc)
         return materials
