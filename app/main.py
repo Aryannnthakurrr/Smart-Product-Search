@@ -137,6 +137,48 @@ async def search_post(request: HybridSearchRequest):
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
 
+@app.get("/recommend", tags=["Search"])
+async def recommend_products(
+    query: str = Query(..., description="Natural language search query", min_length=1)
+):
+    """
+    Get top 10 recommended product IDs based on hybrid search
+    
+    Returns only product IDs - optimized for clean integration
+    
+    Default parameters:
+    - top_k: 10
+    - semantic_weight: 0.7 (prioritize meaning)
+    - keyword_weight: 0.3 (ensure exact matches)
+    - min_score: 0.3
+    
+    Example queries:
+    - cement for foundation work
+    - steel rods for reinforcement
+    - waterproofing material
+    """
+    if not search_engine:
+        raise HTTPException(status_code=503, detail="Search engine not initialized")
+    
+    try:
+        results = search_engine.search(
+            query=query,
+            top_k=10,
+            min_score=0.3,
+            semantic_weight=0.7,
+            keyword_weight=0.3
+        )
+        
+        # Extract only product IDs
+        product_ids = [result["_id"] for result in results]
+        
+        return {
+            "product_ids": product_ids
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Recommendation failed: {str(e)}")
+
+
 @app.post("/rebuild-cache", tags=["Admin"])
 async def rebuild_cache():
     """Rebuild semantic embeddings and BM25 keyword index from scratch"""
