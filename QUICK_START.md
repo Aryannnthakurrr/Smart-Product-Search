@@ -1,21 +1,28 @@
-# Quick Start Guide - Hybrid Search API
+# Quick Start Guide - API Reference & Examples
 
-Complete reference for all endpoints and search types.
+Complete reference for all endpoints with working examples.
+
+---
 
 ## 🚀 Start the Server
 
 ```bash
+# Using uv (recommended)
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# Or standard uvicorn
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-**Wait for:**
+**Startup confirmation:**
 ```
-✅ Loaded 460 materials with embeddings
-✅ Loaded BM25 index with 460 materials
+✅ Loaded 465 materials with embeddings
+✅ Ready! 465 materials indexed for semantic search
+✅ Loaded BM25 index from MongoDB with 465 materials
 ✅ Hybrid search engine ready!
 ```
 
-**Access Points:**
+**Access:**
 - API: http://localhost:8000
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
@@ -26,7 +33,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ### 1. `/recommend` - Simple Product IDs
 
-**Purpose:** Get top 10 recommended product IDs (clean integration)
+**Purpose:** Get top 10 recommended product IDs (clean endpoint for integrations)
 
 **Default Settings:**
 - Top K: 10 products
@@ -36,6 +43,18 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 **Request:**
 ```bash
 curl "http://localhost:8000/recommend?query=cement%20foundation"
+```
+
+**Python:**
+```python
+import requests
+
+response = requests.get(
+    "http://localhost:8000/recommend",
+    params={"query": "cement foundation"}
+)
+product_ids = response.json()["product_ids"]
+print(product_ids)
 ```
 
 **Response:**
@@ -49,50 +68,61 @@ curl "http://localhost:8000/recommend?query=cement%20foundation"
 }
 ```
 
-**Python:**
-```python
-import requests
-
-response = requests.get(
-    "http://localhost:8000/recommend",
-    params={"query": "cement foundation"}
-)
-product_ids = response.json()["product_ids"]
-```
-
 ---
 
 ### 2. `/search` (GET) - Full Hybrid Search
 
-**Purpose:** Detailed results with customizable weights and scores
+**Purpose:** Get detailed results with semantic, keyword, and combined scores
 
 **Parameters:**
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `query` | string | *required* | Search query |
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `query` | string | *required* | Search query (any natural language) |
 | `top_k` | int | 5 | Number of results (1-50) |
-| `min_score` | float | 0.3 | Minimum combined score (0-1) |
-| `semantic_weight` | float | 0.6 | Semantic importance (0-1) |
-| `keyword_weight` | float | 0.4 | Keyword importance (0-1) |
+| `min_score` | float | 0.3 | Minimum combined score (0.0-1.0) |
+| `semantic_weight` | float | 0.6 | Weight for semantic score (0.0-1.0) |
+| `keyword_weight` | float | 0.4 | Weight for keyword score (0.0-1.0) |
 
 **Examples:**
 
-**a) Default (60% semantic, 40% keyword):**
+**a) Default (Balanced 60% semantic, 40% keyword):**
 ```bash
 curl "http://localhost:8000/search?query=cement%20foundation&top_k=5"
 ```
 
-**b) More Semantic (80% semantic, 20% keyword) - Natural Language:**
+**b) Natural Language Query (80% semantic, 20% keyword):**
 ```bash
 curl "http://localhost:8000/search?query=materials%20for%20waterproofing&semantic_weight=0.8&keyword_weight=0.2"
 ```
 
-**c) More Keyword (30% semantic, 70% keyword) - Exact Terms:**
+**c) Exact Brand/Part (30% semantic, 70% keyword):**
 ```bash
 curl "http://localhost:8000/search?query=Portland%20Type%20I&semantic_weight=0.3&keyword_weight=0.7"
 ```
 
-**Response Format:**
+**Python - Default Search:**
+```python
+import requests
+
+response = requests.get(
+    "http://localhost:8000/search",
+    params={
+        "query": "cement foundation",
+        "top_k": 5,
+        "min_score": 0.3
+    }
+)
+
+data = response.json()
+for result in data["results"]:
+    print(f"{result['title']}")
+    print(f"  Semantic:  {result['semantic_score']:.4f}")
+    print(f"  Keyword:   {result['keyword_score']:.4f}")
+    print(f"  Combined:  {result['combined_score']:.4f}")
+    print()
+```
+
+**Response:**
 ```json
 {
   "query": "cement foundation",
@@ -100,7 +130,7 @@ curl "http://localhost:8000/search?query=Portland%20Type%20I&semantic_weight=0.3
     {
       "_id": "673dc3d47f2a2c3aae0c2345",
       "title": "Portland Cement Type I",
-      "description": "High-quality cement for foundation work",
+      "description": "High-quality cement ideal for foundation work",
       "category": "Cement",
       "price": 450.00,
       "quantity": 150,
@@ -116,41 +146,18 @@ curl "http://localhost:8000/search?query=Portland%20Type%20I&semantic_weight=0.3
 }
 ```
 
-**Python:**
-```python
-import requests
-
-response = requests.get(
-    "http://localhost:8000/search",
-    params={
-        "query": "cement foundation",
-        "top_k": 10,
-        "min_score": 0.3,
-        "semantic_weight": 0.7,
-        "keyword_weight": 0.3
-    }
-)
-
-data = response.json()
-for result in data["results"]:
-    print(f"{result['title']}")
-    print(f"  Semantic: {result['semantic_score']:.4f}")
-    print(f"  Keyword: {result['keyword_score']:.4f}")
-    print(f"  Combined: {result['combined_score']:.4f}")
-```
-
 ---
 
 ### 3. `/search` (POST) - JSON Request
 
-**Purpose:** Same as GET but with JSON body (useful for complex queries)
+**Purpose:** Same as GET but with JSON body (better for complex/production scenarios)
 
 **Request:**
 ```bash
 curl -X POST "http://localhost:8000/search" \
   -H "Content-Type: application/json" \
   -d '{
-    "query": "waterproofing bathroom",
+    "query": "waterproofing materials",
     "top_k": 5,
     "min_score": 0.3,
     "semantic_weight": 0.7,
@@ -165,20 +172,21 @@ import requests
 response = requests.post(
     "http://localhost:8000/search",
     json={
-        "query": "waterproofing bathroom",
+        "query": "waterproofing materials",
         "top_k": 5,
-        "min_score": 0.3,
         "semantic_weight": 0.7,
         "keyword_weight": 0.3
     }
 )
+
+results = response.json()["results"]
 ```
 
 ---
 
 ## 🔧 Admin Endpoints
 
-### 4. `/health` - System Status
+### `/health` - System Status
 
 **Purpose:** Check API health and material count
 
@@ -187,16 +195,184 @@ response = requests.post(
 curl "http://localhost:8000/health"
 ```
 
+**Python:**
+```python
+import requests
+
+response = requests.get("http://localhost:8000/health")
+print(response.json())
+```
+
 **Response:**
 ```json
 {
   "status": "healthy",
-  "materials_loaded": 460,
+  "materials_loaded": 465,
   "model": "all-MiniLM-L6-v2"
 }
 ```
 
 ---
+
+### `/rebuild-cache` - Rebuild Indexes
+
+**Purpose:** Rebuild semantic embeddings and BM25 index from MongoDB
+
+**Request:**
+```bash
+curl -X POST "http://localhost:8000/rebuild-cache"
+```
+
+**When to use:**
+- After modifying materials directly in MongoDB
+- To regenerate embeddings with new model
+- After data cleanup/migration
+
+---
+
+### `/webhooks/product-created` - New Product
+
+**Purpose:** Generate embedding for newly created product
+
+**Parameters:** `product_id` (MongoDB ObjectId)
+
+```bash
+curl -X POST "http://localhost:8000/webhooks/product-created?product_id=673dc3d47f2a2c3aae0c2345"
+```
+
+---
+
+### `/webhooks/product-updated` - Update Product
+
+**Purpose:** Update embedding for modified product
+
+**Parameters:** `product_id` (MongoDB ObjectId)
+
+```bash
+curl -X POST "http://localhost:8000/webhooks/product-updated?product_id=673dc3d47f2a2c3aae0c2345"
+```
+
+---
+
+## 💡 Weight Selection Guide
+
+Choose weights based on query type:
+
+### Natural Language Queries (70-90% Semantic)
+**Use when:** Query uses descriptive language, multiple words, meaning-based
+
+**Example:** "materials for waterproofing exterior walls"
+```bash
+curl "http://localhost:8000/search?query=materials%20for%20waterproofing&semantic_weight=0.8&keyword_weight=0.2"
+```
+
+### Balanced Search (60% Semantic, 40% Keyword) - **DEFAULT**
+**Use when:** General purpose, unsure of query type, mixed queries
+
+**Example:** "cement for foundation"
+```bash
+curl "http://localhost:8000/search?query=cement%20for%20foundation"
+```
+
+### Exact Terms/Brands (10-30% Semantic)
+**Use when:** Searching for specific brands, product codes, exact terms
+
+**Example:** "Portland Type I"
+```bash
+curl "http://localhost:8000/search?query=Portland%20Type%20I&semantic_weight=0.2&keyword_weight=0.8"
+```
+
+---
+
+## 📊 Performance Reference
+
+From comprehensive testing (3 runs, 465 materials):
+
+| Metric | Performance |
+|--------|-------------|
+| Semantic Search | 14.56 ms avg, 69.94 QPS |
+| BM25 Keyword | 25.25 ms avg, 39.62 QPS |
+| Hybrid Search | 46.95 ms avg, 21.37 QPS |
+| **Concurrent Simulation** | **43.48 ms avg, 23.7 QPS** |
+| **Response Time p99** | **70.90 ms** |
+| **Memory per Material** | **91.88 KB** |
+
+**Result:** 97% of requests < 50ms, 99% < 100ms ✅
+
+---
+
+## 🔍 Common Query Examples
+
+| Intent | Query | Recommended Weights |
+|--------|-------|-------------------|
+| Find waterproofing | "waterproofing materials" | 0.8 / 0.2 |
+| Specific product | "Portland Cement Type I" | 0.2 / 0.8 |
+| Construction needs | "materials for strong foundation" | 0.7 / 0.3 |
+| Category search | "roofing materials" | 0.6 / 0.4 (default) |
+| Brand search | "Ambuja cement" | 0.3 / 0.7 |
+
+---
+
+## �️ Integration Examples
+
+### JavaScript/Node.js
+```javascript
+const fetch = require('node-fetch');
+
+// Simple recommendation
+const recommendResponse = await fetch('http://localhost:8000/recommend?query=cement');
+const ids = await recommendResponse.json();
+console.log(ids.product_ids);
+
+// Full search
+const searchResponse = await fetch(
+  'http://localhost:8000/search?query=cement&top_k=5&semantic_weight=0.6'
+);
+const results = await searchResponse.json();
+console.log(results.results);
+```
+
+### PHP
+```php
+// Simple recommendation
+$ch = curl_init('http://localhost:8000/recommend?query=cement');
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+$response = curl_exec($ch);
+$data = json_decode($response, true);
+print_r($data['product_ids']);
+```
+
+### cURL (Bash)
+```bash
+# Get product IDs
+curl "http://localhost:8000/recommend?query=steel%20rods"
+
+# Full search with custom weights
+curl "http://localhost:8000/search?query=waterproofing&semantic_weight=0.8&top_k=3"
+
+# Health check
+curl "http://localhost:8000/health"
+```
+
+---
+
+## ⚠️ Troubleshooting
+
+**Q: Getting 500 errors on startup?**  
+A: Check MongoDB connection in `.env` file. Run `curl http://localhost:8000/health` to verify.
+
+**Q: Search returning empty results?**  
+A: Try lowering `min_score` parameter (default 0.3). Check MongoDB has materials.
+
+**Q: Slow first request?**  
+A: Normal - first semantic search has model loading overhead (~150ms). Subsequent requests are fast.
+
+**Q: How to handle real-time product updates?**  
+A: Use `/webhooks/product-updated` endpoint when product data changes in MongoDB.
+
+---
+
+**Need more help?** Check `/docs` endpoint (Swagger UI) when server is running or see main `README.md`
 
 ### 5. `/rebuild-cache` - Rebuild Indexes
 

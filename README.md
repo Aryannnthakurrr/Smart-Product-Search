@@ -1,82 +1,94 @@
-﻿# 🏗️ Construction Materials Hybrid Search API
+﻿# 🏗️ Material Mover - Hybrid Search Engine
 
-A high-performance FastAPI microservice that provides **intelligent hybrid search** for construction materials combining semantic understanding (BERT embeddings) with keyword precision (BM25). Built with Sentence-BERT and MongoDB vector storage, this API delivers the best of both worlds.
+A production-grade FastAPI microservice for intelligent construction materials search. Combines **semantic understanding** (BERT embeddings) with **keyword precision** (BM25) to deliver the best of both worlds.
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-green.svg)](https://fastapi.tiangolo.com/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green.svg)](https://www.mongodb.com/cloud/atlas)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Demo](https://img.shields.io/badge/🎯%20Live%20Demo-View%20Project-0ea5e9?style=flat)](https://aryanthakur.vercel.app/projects/smart-product-search.html)
 
-## ✨ Features
+**Status:** ✅ Production-Ready | **Performance:** ⚡ 50-70 QPS | **Memory:** 💾 ~42MB for 465 materials
 
-- 🎯 **Hybrid Search** - Combines semantic understanding with keyword matching
-- 🔍 **Semantic Search** - BERT embeddings for context and meaning
-- 🔑 **Keyword Search** - BM25 ranking for exact term matches
-- ⚖️ **Customizable Weights** - Adjust semantic vs keyword balance
-- ⚡ **High Performance** - Sub-20ms search latency
-- 💾 **Persistent Storage** - MongoDB with automatic caching
-- 📊 **Interactive API Docs** - Built-in Swagger UI at `/docs`
-- 🎁 **Clean Recommendations** - Simple endpoint returning only product IDs
+## ✨ Core Features
 
-##  Quick Start
+- 🎯 **Hybrid Search Engine** - Combines semantic + keyword algorithms for superior relevance
+- 🔍 **Semantic Search** - BERT embeddings (384-dim) with cosine similarity for contextual understanding
+- 🔑 **Keyword Search** - BM25 ranking for exact terms, acronyms, and brand names
+- ⚖️ **Customizable Weights** - Adjust semantic/keyword balance (0.0-1.0) per query
+- ⚡ **High Performance** - 14.56ms avg semantic, 25.25ms avg keyword, 46.95ms hybrid
+- 📊 **Detailed Scoring** - Semantic, keyword, and combined scores with transparency
+- 🎁 **Clean Recommendations API** - Simple endpoint returning product IDs only
+- 💾 **Persistent Storage** - MongoDB Atlas with automatic embedding caching
+- 🏥 **Health Checks** - System status and material count endpoints
+- � **Interactive Docs** - Auto-generated Swagger UI at `/docs`, ReDoc at `/redoc`
+
+## 🚀 Quick Start
 
 ### Prerequisites
+- **Python 3.11+** - Modern async runtime
+- **MongoDB Atlas** - Free tier account ([Sign up](https://www.mongodb.com/cloud/atlas))
+- **2GB+ RAM** - For model loading and inference
 
-- **Python 3.11+** - Required for modern async features
-- **MongoDB Atlas** - Free tier account ([Sign up here](https://www.mongodb.com/cloud/atlas))
-- **2GB+ RAM** - For model loading and operations
+### Installation (3 Steps)
 
-### Installation
-
-1. **Clone the repository**
+**1. Clone & Navigate**
 ```bash
 git clone <repository-url>
 cd materialmoversearch
 ```
 
-2. **Install dependencies with uv**
+**2. Install Dependencies with `uv`** (Recommended)
 ```bash
-# Install uv if you don't have it
-# Windows (PowerShell)
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+# Install uv (if needed)
+# Windows: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+# Linux/Mac: curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Linux/Mac
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install project dependencies (uv auto-manages virtual environment)
+# Install project dependencies
 uv sync
 ```
 
-> 💡 **Alternative with pip**: If you prefer using pip, run `python -m venv .venv`, activate it, then `pip install -r requirements.txt`
+**Alternative with pip:**
+```bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/Mac: source .venv/bin/activate
+pip install -r requirements.txt
+```
 
-### Configuration
+**3. Configure Environment**
 
-Create a `.env` file in the project root:
-
+Create `.env` in project root:
 ```env
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/
 MONGODB_DATABASE=product
 MONGODB_COLLECTION=products
 ```
 
-### Run the Server
+### Start the Server
 
 ```bash
-# Using uv (recommended - auto-activates virtual environment)
+# Using uv (auto-activates virtual environment)
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-# Or with standard uvicorn (if you activated .venv manually)
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The API will be available at:
-- **API**: http://localhost:8000
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+**Expected output:**
+```
+✅ Loaded 465 materials with embeddings
+✅ Ready! 465 materials indexed for semantic search
+✅ Loaded BM25 index from MongoDB with 465 materials
+✅ Hybrid search engine ready!
+```
+
+**Access:**
+- **API:** http://localhost:8000
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
 
 ## 💡 Usage Examples
 
-### 1. Recommend Products (Clean - Only IDs)
-
+### Example 1: Simple Recommendations
+Get top 10 recommended product IDs (clean integration):
 ```bash
 curl "http://localhost:8000/recommend?query=cement%20foundation"
 ```
@@ -84,27 +96,23 @@ curl "http://localhost:8000/recommend?query=cement%20foundation"
 **Response:**
 ```json
 {
-  "product_ids": [
-    "507f1f77bcf86cd799439011",
-    "507f1f77bcf86cd799439012",
-    "507f1f77bcf86cd799439013"
-  ]
+  "product_ids": ["673dc3d47f2a2c3aae0c2345", "673dc3d47f2a2c3aae0c2346", "673dc3d47f2a2c3aae0c2347"]
 }
 ```
 
-### 2. Hybrid Search (Full Details + Scores)
-
+### Example 2: Full Hybrid Search
+Get detailed results with scores:
 ```bash
-curl "http://localhost:8000/search?query=cement%20for%20foundation&top_k=3"
+curl "http://localhost:8000/search?query=cement%20foundation&top_k=3"
 ```
 
 **Response:**
 ```json
 {
-  "query": "cement for foundation",
+  "query": "cement foundation",
   "results": [
     {
-      "_id": "507f1f77bcf86cd799439011",
+      "_id": "673dc3d47f2a2c3aae0c2345",
       "title": "Portland Cement Type I",
       "description": "High-quality cement ideal for foundation work",
       "category": "Cement",
@@ -118,20 +126,19 @@ curl "http://localhost:8000/search?query=cement%20for%20foundation&top_k=3"
 }
 ```
 
-### 3. Custom Weights (More Semantic for Natural Language)
-
+### Example 3: Natural Language (More Semantic)
+For natural language queries, increase semantic weight:
 ```bash
 curl "http://localhost:8000/search?query=materials%20for%20waterproofing&semantic_weight=0.8&keyword_weight=0.2"
 ```
 
-### 4. Custom Weights (More Keyword for Exact Terms)
-
+### Example 4: Exact Terms (More Keyword)
+For exact brand/part numbers, increase keyword weight:
 ```bash
 curl "http://localhost:8000/search?query=Portland%20Type%20I&semantic_weight=0.3&keyword_weight=0.7"
 ```
 
-### 5. Python Client
-
+### Example 5: Python Client
 ```python
 import requests
 
@@ -142,7 +149,7 @@ response = requests.get(
 )
 product_ids = response.json()["product_ids"]
 
-# Detailed hybrid search
+# Detailed hybrid search with custom weights
 response = requests.get(
     "http://localhost:8000/search",
     params={
@@ -154,11 +161,10 @@ response = requests.get(
 )
 
 for item in response.json()["results"]:
-    print(f"{item['title']} - Combined: {item['combined_score']:.2%}")
+    print(f"{item['title']}: {item['combined_score']:.2%}")
 ```
 
-### 6. Health Check
-
+### Example 6: Health Check
 ```bash
 curl http://localhost:8000/health
 ```
@@ -167,7 +173,7 @@ curl http://localhost:8000/health
 ```json
 {
   "status": "healthy",
-  "materials_loaded": 1247,
+  "materials_loaded": 465,
   "model": "all-MiniLM-L6-v2"
 }
 ```
@@ -177,72 +183,108 @@ curl http://localhost:8000/health
 ### Search Endpoints
 
 #### `GET /recommend`
-Get top 10 recommended product IDs (clean integration endpoint).
+**Get top 10 recommended product IDs** (clean endpoint for simple integrations)
 
 **Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `query` | string | ✅ Yes | Natural language search query |
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `query` | string | ✅ | Search query |
 
-**Default Behavior:**
-- Returns top 10 products
-- Semantic weight: 0.7 (70%)
-- Keyword weight: 0.3 (30%)
-- Min score: 0.3
+**Defaults:** Top 10 results | 70% semantic, 30% keyword | Min score: 0.3
 
 **Response:** `{"product_ids": ["id1", "id2", ...]}`
 
-#### `GET /search`
-Hybrid search with full customization and detailed results.
+---
+
+#### `GET /search` & `POST /search`
+**Detailed hybrid search** with full customization and scoring transparency
 
 **Parameters:**
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `query` | string | ✅ Yes | - | Natural language search query |
-| `top_k` | integer | ❌ No | 5 | Number of results (1-50) |
-| `min_score` | float | ❌ No | 0.3 | Minimum combined score (0.0-1.0) |
-| `semantic_weight` | float | ❌ No | 0.6 | Semantic search weight (0.0-1.0) |
-| `keyword_weight` | float | ❌ No | 0.4 | Keyword search weight (0.0-1.0) |
+| Name | Type | Required | Default | Range | Description |
+|------|------|----------|---------|-------|-------------|
+| `query` | string | ✅ | — | — | Search query |
+| `top_k` | integer | ❌ | 5 | 1-50 | Results to return |
+| `min_score` | float | ❌ | 0.3 | 0.0-1.0 | Minimum combined score |
+| `semantic_weight` | float | ❌ | 0.6 | 0.0-1.0 | Semantic algorithm weight |
+| `keyword_weight` | float | ❌ | 0.4 | 0.0-1.0 | Keyword algorithm weight |
 
 **Example Queries:**
-- `cement for foundation work`
-- `steel rods for reinforcement`
-- `waterproofing material for roof`
-- `paint for exterior walls`
+- `"cement for foundation"` — Natural language
+- `"steel rods reinforcement"` — Multiple terms
+- `"Portland Type I"` — Brand/specific product
+- `"waterproofing materials"` — Category search
 
-**Response:** Full product details with `semantic_score`, `keyword_score`, and `combined_score`
+**GET Request:**
+```bash
+curl "http://localhost:8000/search?query=cement&semantic_weight=0.7&top_k=5"
+```
 
-#### `POST /search`
-Same as GET `/search` but with JSON body.
+**POST Request:**
+```bash
+curl -X POST "http://localhost:8000/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "cement foundation",
+    "top_k": 5,
+    "semantic_weight": 0.6,
+    "keyword_weight": 0.4
+  }'
+```
 
-**Request Body:**
+**Response:**
 ```json
 {
-  "query": "string (required)",
-  "top_k": 5,
-  "min_score": 0.3,
-  "semantic_weight": 0.6,
-  "keyword_weight": 0.4
+  "query": "cement foundation",
+  "results": [
+    {
+      "_id": "ObjectId",
+      "title": "Product Name",
+      "description": "Product description",
+      "category": "Category",
+      "price": 450.00,
+      "semantic_score": 0.8542,
+      "keyword_score": 0.7891,
+      "combined_score": 0.8291
+    }
+  ],
+  "total": 1
 }
 ```
 
-### Admin Endpoints
+---
 
 #### `GET /health`
-Health check with service statistics.
+**System health and statistics**
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "materials_loaded": 465,
+  "model": "all-MiniLM-L6-v2"
+}
+```
+
+---
+
+### Admin Endpoints
 
 #### `POST /rebuild-cache`
-Rebuild semantic embeddings and BM25 keyword index from scratch.
+Rebuild semantic embeddings and BM25 index from MongoDB
+
+```bash
+curl -X POST "http://localhost:8000/rebuild-cache"
+```
 
 #### `POST /webhooks/product-created`
-Generate embedding for newly created product.
+Generate embedding for new product
 
-**Parameters:** `product_id` (MongoDB ObjectId)
+**Parameter:** `product_id` (MongoDB ObjectId)
 
 #### `POST /webhooks/product-updated`
-Update embedding for modified product.
+Update embedding for modified product
 
-**Parameters:** `product_id` (MongoDB ObjectId)
+**Parameter:** `product_id` (MongoDB ObjectId)
 
 ## 📁 Project Structure
 
@@ -278,74 +320,181 @@ materialmoversearch/
 
 **`app/models/schemas.py`** - Request/response validation with Pydantic
 
-## 🔬 How It Works
+## � Support & Documentation
 
-### Hybrid Search Architecture
-
-The system combines two complementary search methods:
-
-**1. Semantic Search (BERT)**
-- Converts text to 384-dimensional vectors
-- Understands meaning, context, and synonyms
-- Uses cosine similarity for ranking
-- Ideal for natural language queries
-
-**2. Keyword Search (BM25)**
-- Inverted index with term frequency analysis
-- Excels at exact term matching
-- Handles acronyms and brand names
-- Formula: `BM25(q,d) = Σ IDF(qi) × TF(qi,d)`
-
-**3. Score Combination**
-```python
-combined_score = (semantic_weight × semantic_score) + (keyword_weight × keyword_score)
-```
-
-Both scores are normalized to [0,1], then weighted and combined for final ranking.
-
-### Model Initialization
-On startup, loads `all-MiniLM-L6-v2` Sentence-BERT model (133MB) and builds BM25 index from MongoDB data.
-
-### Search Flow
-1. Encode query into vector (semantic) and tokens (keyword)
-2. Calculate cosine similarity (semantic) and BM25 scores (keyword)
-3. Normalize both scores to [0,1] range
-4. Apply weights and combine scores
-5. Rank by combined score and return top-k results
-
-## ⚡ Performance
-
-| Metric | Value |
-|--------|-------|
-| **Cold Start** | 8-12 seconds |
-| **Search Latency** | 15-25ms |
-| **Throughput** | 50-100 req/s |
-| **Memory Usage** | ~600MB |
-
-### When to Use Different Weights
-
-| Use Case | Semantic | Keyword | Example Query |
-|----------|----------|---------|---------------|
-| Natural language | 0.7-0.9 | 0.1-0.3 | "materials for waterproofing" |
-| Balanced (default) | 0.5-0.6 | 0.4-0.5 | "cement for foundation" |
-| Exact terms/brands | 0.1-0.3 | 0.7-0.9 | "Portland Type I" |
-
-## 🛠️ Tech Stack
-
-- **[FastAPI](https://fastapi.tiangolo.com/) 0.115+** - Modern async web framework
-- **[Sentence-Transformers](https://www.sbert.net/) 5.1+** - BERT-based semantic embeddings
-- **[MongoDB Atlas](https://www.mongodb.com/cloud/atlas)** - Cloud database platform
-- **[NumPy](https://numpy.org/) 2.3+** - Efficient vector operations
-- **[NLTK](https://www.nltk.org/) 3.8+** - Natural language toolkit for BM25
-- **[Uvicorn](https://www.uvicorn.org/)** - ASGI server
-
-### Model Details
-- **Name**: `all-MiniLM-L6-v2`
-- **Size**: 133MB
-- **Dimensions**: 384
-- **Performance**: 14.5x faster than BERT-base
-- **Quality**: 96.3% of BERT-large performance
+- **Swagger API Docs:** http://localhost:8000/docs (when running)
+- **ReDoc:** http://localhost:8000/redoc (when running)
+- **GitHub:** [Smart-Product-Search](https://github.com/Aryannnthakurrr/Smart-Product-Search)
+- **Quick Start Guide:** See `QUICK_START.md` for detailed examples
 
 ---
 
-For detailed endpoint documentation and examples, see [QUICK_START.md](QUICK_START.md) or visit `/docs` when running the server.
+**Built with ❤️ for intelligent product search** | MIT License
+
+## ⚡ Performance Metrics
+
+**Tested on:** Windows 11, Python 3.11, 465 materials | **3 consecutive test runs** (Nov 9, 2025)
+
+### Throughput & Latency
+
+| Algorithm | Avg Response | Range | QPS | Status |
+|-----------|--------------|-------|-----|--------|
+| **Semantic Search** | 14.56 ms | 10.32-39.27 ms | **69.94** | ✅ Fastest |
+| **BM25 Keyword** | 25.25 ms | 20.79-45.40 ms | 39.62 | ✅ Stable |
+| **Hybrid (60/40)** | 46.95 ms | 36.19-78.46 ms | 21.37 | ✅ Accurate |
+| **Concurrent (48 req)** | 43.48 ms | 34.63-67.14 ms | ~23.7 | ✅ Predictable |
+
+### Response Time Distribution (100 Queries)
+
+```
+Min:    31.98 ms (p0)
+p50:    42.24 ms (median)
+p90:    47.33 ms (90th percentile)
+p95:    49.01 ms (95th percentile)  
+p99:    70.90 ms (99th percentile)
+Max:    70.90 ms (p100)
+```
+
+**Result:** 97% of requests complete in <50ms | 99% in <100ms ✅
+
+### Memory Footprint
+
+| Metric | Value |
+|--------|-------|
+| **Engine Memory** | 41.72 MB (465 materials) |
+| **Per Material** | 91.88 KB |
+| **For 1,000 materials** | ~92 MB |
+| **For 10,000 materials** | ~920 MB |
+| **For 50,000 materials** | ~4.6 GB |
+
+### Index Statistics
+
+- **BM25 Inverted Index:** 2,172 unique terms
+- **Semantic Embeddings:** 465 × 384-dim vectors
+- **Average Document Length:** 20.43 tokens
+- **Model:** all-MiniLM-L6-v2 (133MB, 384-dimensional)
+
+### Weight Configuration Guide
+
+| Scenario | Semantic | Keyword | Example Query | Best For |
+|----------|----------|---------|---------------|----------|
+| Natural Language | 0.7-0.9 | 0.1-0.3 | "materials for waterproofing" | Meaning-based queries |
+| **Balanced (Default)** | **0.6** | **0.4** | "cement for foundation" | **General purpose** |
+| Exact Terms/Brands | 0.1-0.3 | 0.7-0.9 | "Portland Type I" | Brand/spec searches |
+
+## � How It Works
+
+### Algorithm Architecture
+
+**1. Semantic Search (BERT)**
+- Model: `all-MiniLM-L6-v2` (384-dim embeddings)
+- Encodes query and materials into vectors
+- Uses cosine similarity for ranking
+- Understands meaning, context, synonyms
+- Throughput: 69.94 QPS
+
+**2. Keyword Search (BM25)**
+- Builds inverted index from materials
+- Ranks by term frequency & document frequency
+- Formula: `BM25(q,d) = Σ IDF(qi) × TF(qi,d)`
+- Excels at exact matches and acronyms
+- Throughput: 39.62 QPS
+
+**3. Score Combination**
+```
+combined_score = (semantic_weight × semantic_score) 
+               + (keyword_weight × keyword_score)
+Results ranked by combined_score (highest first)
+```
+
+### Search Flow
+1. **Encode** query (semantic vector + keyword tokens)
+2. **Calculate** semantic (cosine sim) and keyword (BM25) scores
+3. **Normalize** both scores to [0, 1] range
+4. **Combine** with weights: `0.6 × semantic + 0.4 × keyword` (default)
+5. **Filter** by `min_score` threshold (default: 0.3)
+6. **Rank** results and return top-k
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Library | Version | Purpose |
+|-----------|---------|---------|---------|
+| **Framework** | FastAPI | 0.115+ | Async web API framework |
+| **Embeddings** | Sentence-Transformers | 5.1+ | BERT-based semantic vectors |
+| **Database** | MongoDB Atlas | Cloud | Material storage & indexing |
+| **Numerics** | NumPy | 2.3+ | Vector operations |
+| **NLP** | NLTK | 3.8+ | BM25 implementation |
+| **Server** | Uvicorn | Latest | ASGI application server |
+
+### Model Specifications
+- **Name:** `all-MiniLM-L6-v2` (Hugging Face)
+- **Size:** 133 MB (fast loading)
+- **Dimensions:** 384-dimensional vectors
+- **Performance:** 14.5× faster than BERT-base
+- **Quality:** 96.3% of BERT-large accuracy
+
+---
+
+## 📁 Project Structure
+
+```
+materialmoversearch/
+├── app/
+│   ├── main.py                 # FastAPI app, routes, lifecycle
+│   ├── core/
+│   │   ├── config.py          # Settings & environment variables
+│   │   └── database.py        # MongoDB connection & operations
+│   ├── models/
+│   │   └── schemas.py         # Pydantic request/response models
+│   └── services/
+│       ├── search.py          # Semantic search engine (BERT)
+│       ├── keyword_search.py  # BM25 keyword search engine
+│       └── hybrid_search.py   # Combines both engines
+├── tests/
+│   ├── test_memory.py         # Memory footprint analysis
+│   ├── test_performance.py    # Response time distribution
+│   └── test_throughput.py     # Throughput benchmarks
+├── .env                        # Environment configuration
+├── requirements.txt            # Python dependencies
+├── pyproject.toml             # Project metadata & dependencies
+├── README.md                  # This file
+└── QUICK_START.md             # Detailed API guide
+
+```
+
+### Key Files
+
+- **`app/main.py`** - FastAPI application, routes, middleware, startup/shutdown
+- **`app/services/hybrid_search.py`** - Orchestrates both search engines with weighted scoring
+- **`app/services/search.py`** - BERT embeddings, cosine similarity, vector operations
+- **`app/services/keyword_search.py`** - BM25 ranking, inverted index building
+- **`app/core/database.py`** - MongoDB CRUD, embedding persistence
+- **`app/models/schemas.py`** - Pydantic validation for requests/responses
+
+---
+
+## 🧪 Testing & Benchmarks
+
+Run comprehensive performance tests:
+
+```bash
+# Run all tests once
+uv run python run_all_tests.py
+
+# Run tests 3 times for average analysis
+uv run python run_tests_3x_analysis.py
+
+# Individual test modules
+uv run python -m pytest tests/test_memory.py
+uv run python -m pytest tests/test_performance.py
+uv run python -m pytest tests/test_throughput.py
+```
+
+**Test Coverage:**
+- ✅ Memory footprint & scalability
+- ✅ Throughput by algorithm (semantic/keyword/hybrid)
+- ✅ Response time distribution (p50, p90, p95, p99)
+- ✅ Concurrent query simulation
+- ✅ Index statistics & performance variance
