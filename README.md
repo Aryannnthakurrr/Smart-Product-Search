@@ -8,7 +8,7 @@ A production-grade FastAPI microservice for intelligent construction materials s
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Demo](https://img.shields.io/badge/🎯%20Live%20Demo-View%20Project-0ea5e9?style=flat)](https://aryanthakur.vercel.app/projects/smart-product-search.html)
 
-**Status:** ✅ Production-Ready | **Performance:** ⚡ 50-70 QPS | **Memory:** 💾 ~42MB for 465 materials
+**Status:** ✅ Production-Ready | **Performance:** ⚡ 50-70 QPS | **Memory:** 💾Estimated ~920MB for 10,000 products
 
 ## ✨ Core Features
 
