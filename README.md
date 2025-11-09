@@ -276,15 +276,23 @@ Rebuild semantic embeddings and BM25 index from MongoDB
 curl -X POST "http://localhost:8000/rebuild-cache"
 ```
 
-#### `POST /webhooks/product-created`
-Generate embedding for new product
+#### `POST /webhook/product-added`
+Generate embedding for newly added product
 
-**Parameter:** `product_id` (MongoDB ObjectId)
+**Parameter:** `product_id` (MongoDB ObjectId as string)
 
-#### `POST /webhooks/product-updated`
+```bash
+curl -X POST "http://localhost:8000/webhook/product-added?product_id=673dc3d47f2a2c3aae0c2345"
+```
+
+#### `POST /webhook/product-updated`
 Update embedding for modified product
 
-**Parameter:** `product_id` (MongoDB ObjectId)
+**Parameter:** `product_id` (MongoDB ObjectId as string)
+
+```bash
+curl -X POST "http://localhost:8000/webhook/product-updated?product_id=673dc3d47f2a2c3aae0c2345"
+```
 
 ## 📁 Project Structure
 
