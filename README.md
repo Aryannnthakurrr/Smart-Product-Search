@@ -491,9 +491,6 @@ Run comprehensive performance tests:
 # Run all tests once
 uv run python run_all_tests.py
 
-# Run tests 3 times for average analysis
-uv run python run_tests_3x_analysis.py
-
 # Individual test modules
 uv run python -m pytest tests/test_memory.py
 uv run python -m pytest tests/test_performance.py
